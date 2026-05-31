@@ -1,0 +1,370 @@
+"use client";
+
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  CheckCircle2,
+  Download,
+  FileText,
+  Loader2,
+  MoreVertical,
+  Trash2,
+  Video,
+  X,
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { DocumentItem } from "./document-list";
+import { cn } from "@/lib/utils";
+
+function formatSize(bytes: number | null) {
+  if (!bytes) return "—";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function formatDate(iso: string) {
+  return new Intl.DateTimeFormat("es-MX", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(iso));
+}
+
+function statusLabel(status: string) {
+  switch (status) {
+    case "READY":
+      return { text: "Disponible", variant: "success" as const };
+    case "PROCESSING":
+    case "UPLOADING":
+      return { text: "Procesando…", variant: "warning" as const };
+    case "FAILED":
+      return { text: "Error", variant: "muted" as const };
+    default:
+      return { text: status, variant: "muted" as const };
+  }
+}
+
+type DocumentCardProps = {
+  doc: DocumentItem;
+  index: number;
+  canManage?: boolean;
+  onDeleted: () => void;
+};
+
+export function DocumentCard({
+  doc,
+  index,
+  canManage = false,
+  onDeleted,
+}: DocumentCardProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showVideo, setShowVideo] = useState(false);
+
+  const isVideo = doc.type === "VIDEO";
+  const st = statusLabel(doc.status);
+  const canDownload = !!doc.hasFile;
+  const fileUrl = `/api/documents/${doc.id}/file`;
+
+  async function handleDownload() {
+    setMenuOpen(false);
+    setDownloading(true);
+    setError(null);
+    try {
+      const res = await fetch(fileUrl);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? "No se pudo descargar");
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = doc.title;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al descargar");
+    } finally {
+      setDownloading(false);
+    }
+  }
+
+  async function handleDelete() {
+    setDeleting(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/documents/${doc.id}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? "No se pudo eliminar");
+      onDeleted();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al eliminar");
+      setDeleting(false);
+      setConfirmDelete(false);
+    }
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.04 }}
+    >
+      <Card className="overflow-hidden transition-shadow hover:shadow-md">
+        <CardHeader className="flex flex-row items-start gap-4 pb-2">
+          <div
+            className={cn(
+              "flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ring-1",
+              isVideo
+                ? "bg-gradient-to-br from-violet-50 to-indigo-50 ring-violet-100"
+                : "bg-gradient-to-br from-red-50 to-orange-50 ring-red-100"
+            )}
+          >
+            {isVideo ? (
+              <Video className="h-6 w-6 text-brand-cobalt" />
+            ) : (
+              <FileText className="h-6 w-6 text-red-500" />
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <CardTitle className="truncate text-base leading-snug">
+              {doc.title}
+            </CardTitle>
+            <p className="mt-1 text-xs text-brand-muted-gray">
+              {formatDate(doc.createdAt)} · {formatSize(doc.fileSize)}
+              {isVideo ? " · Video" : " · PDF"}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <Badge variant={st.variant}>{st.text}</Badge>
+            {canManage && (
+              <div className="relative">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9"
+                  onClick={() => setMenuOpen((v) => !v)}
+                  aria-label="Opciones del documento"
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+                {menuOpen && (
+                  <>
+                    <button
+                      type="button"
+                      className="fixed inset-0 z-10"
+                      aria-label="Cerrar menú"
+                      onClick={() => setMenuOpen(false)}
+                    />
+                    <div className="absolute right-0 top-full z-20 mt-1 min-w-[180px] overflow-hidden rounded-2xl border border-black/5 bg-white py-1 shadow-lg">
+                      <button
+                        type="button"
+                        disabled={!canDownload || downloading}
+                        onClick={handleDownload}
+                        className="flex w-full items-center gap-2 px-4 py-2.5 text-sm hover:bg-brand-light-bg disabled:opacity-50"
+                      >
+                        {downloading ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Download className="h-4 w-4 text-brand-cobalt" />
+                        )}
+                        Descargar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMenuOpen(false);
+                          setConfirmDelete(true);
+                        }}
+                        className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Eliminar
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        </CardHeader>
+
+        {doc.status === "READY" && (
+          <CardContent className="space-y-3">
+            {isVideo ? (
+              <>
+                {showVideo ? (
+                  <video
+                    controls
+                    className="w-full rounded-2xl bg-black"
+                    src={fileUrl}
+                    preload="metadata"
+                  >
+                    Tu navegador no soporta reproducción de video.
+                  </video>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full sm:w-auto"
+                    onClick={() => setShowVideo(true)}
+                  >
+                    <Video className="h-4 w-4" />
+                    Ver video
+                  </Button>
+                )}
+              </>
+            ) : (
+              <>
+                {canManage && (
+                  <ul className="grid gap-2 sm:grid-cols-3">
+                    <li className="flex items-center gap-2 rounded-xl bg-brand-light-bg px-3 py-2 text-sm">
+                      <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
+                      <span className="text-brand-muted-gray">Fragmentos</span>
+                      <span className="ml-auto font-semibold">
+                        {doc.chunkCount}
+                      </span>
+                    </li>
+                    <li className="flex items-center gap-2 rounded-xl bg-brand-light-bg px-3 py-2 text-sm">
+                      <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
+                      <span className="text-brand-muted-gray">Mentor IA</span>
+                      <span className="ml-auto font-medium text-emerald-600">
+                        {doc.chunkCount > 0 ? "Activo" : "—"}
+                      </span>
+                    </li>
+                    <li className="flex items-center gap-2 rounded-xl bg-brand-light-bg px-3 py-2 text-sm">
+                      <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
+                      <span className="text-brand-muted-gray">Alcance</span>
+                      <span className="ml-auto text-xs font-medium">
+                        Solo tu empresa
+                      </span>
+                    </li>
+                  </ul>
+                )}
+                {canDownload && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full sm:w-auto"
+                    disabled={downloading}
+                    onClick={handleDownload}
+                  >
+                    {downloading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Download className="h-4 w-4" />
+                    )}
+                    Descargar PDF
+                  </Button>
+                )}
+              </>
+            )}
+          </CardContent>
+        )}
+
+        {doc.status === "FAILED" && canManage && (
+          <CardContent className="space-y-3">
+            <p className="text-sm text-red-600">
+              No se pudo procesar el archivo. Revisa el formato e inténtalo de
+              nuevo.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {canDownload && (
+                <Button variant="outline" size="sm" onClick={handleDownload}>
+                  <Download className="h-4 w-4" />
+                  Descargar
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-red-600 hover:bg-red-50"
+                onClick={() => setConfirmDelete(true)}
+              >
+                <Trash2 className="h-4 w-4" />
+                Eliminar
+              </Button>
+            </div>
+          </CardContent>
+        )}
+
+        {(doc.status === "PROCESSING" || doc.status === "UPLOADING") && (
+          <CardContent>
+            <div className="flex items-center gap-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+              {isVideo ? "Procesando video…" : "Indexando para el mentor IA…"}
+            </div>
+          </CardContent>
+        )}
+
+        {error && (
+          <CardContent className="pt-0">
+            <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">
+              {error}
+            </p>
+          </CardContent>
+        )}
+
+        {canManage && (
+          <AnimatePresence>
+            {confirmDelete && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden border-t border-black/5 bg-red-50/50"
+              >
+                <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-red-900">
+                      ¿Eliminar «{doc.title}»?
+                    </p>
+                    <p className="text-xs text-red-700/80">
+                      Se borrará el archivo
+                      {!isVideo && " y los fragmentos de IA"}. Esta acción no se
+                      puede deshacer.
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={deleting}
+                      onClick={() => setConfirmDelete(false)}
+                    >
+                      <X className="h-4 w-4" />
+                      Cancelar
+                    </Button>
+                    <Button
+                      size="sm"
+                      disabled={deleting}
+                      className={cn(
+                        "bg-red-600 text-white hover:bg-red-700",
+                        "shadow-none"
+                      )}
+                      onClick={handleDelete}
+                    >
+                      {deleting ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
+                      Eliminar
+                    </Button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        )}
+      </Card>
+    </motion.div>
+  );
+}
