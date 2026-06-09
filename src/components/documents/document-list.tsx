@@ -11,6 +11,8 @@ export type DocumentItem = {
   status: string;
   fileSize: number | null;
   chunkCount: number;
+  embeddingCount?: number;
+  contentGenerated?: boolean;
   createdAt: string;
   hasFile: boolean;
 };
@@ -58,6 +60,7 @@ export function DocumentList({
           index={i}
           canManage={canManage}
           onDeleted={onRefresh}
+          onRefresh={onRefresh}
         />
       ))}
     </div>

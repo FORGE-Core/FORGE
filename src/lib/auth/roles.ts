@@ -5,6 +5,18 @@ export function isAdmin(role: UserRole | undefined): boolean {
   return role === "ADMIN";
 }
 
+export function isSupervisor(role: UserRole | undefined): boolean {
+  return role === "SUPERVISOR";
+}
+
+export function canViewReports(role: UserRole | undefined): boolean {
+  return isAdmin(role) || isSupervisor(role);
+}
+
+export function canManageTeam(role: UserRole | undefined): boolean {
+  return isAdmin(role);
+}
+
 export function canUploadMedia(role: UserRole | undefined): boolean {
   return isAdmin(role);
 }

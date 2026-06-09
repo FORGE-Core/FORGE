@@ -1,53 +1,74 @@
-# Roadmap MVP — Cappi
+# Roadmap MVP — FORGE / Cappi ✅ COMPLETADO
 
-## Fase 1 — Fundación (Semana 1-2) ✅ En progreso
+## Fase 1 — Fundación ✅
 
 - [x] Estructura Next.js + TypeScript + Tailwind v4
 - [x] Schema Prisma multi-tenant
-- [x] Capa IA desacoplada (OpenAI + Ollama)
+- [x] Capa IA desacoplada (Gemini + OpenAI + Ollama)
 - [x] Pipeline RAG base
 - [x] Landing + Dashboard UI premium
 - [x] Componentes base (Navbar, Sidebar, Chat, Metrics)
-- [ ] Auth completa (NextAuth + Google OAuth)
-- [ ] Migración pgvector en PostgreSQL
+- [x] Auth (NextAuth credenciales + Google OAuth opcional)
+- [x] pgvector (script SQL en `prisma/supabase-setup.sql`)
 
-## Fase 2 — Core producto (Semana 3-4)
+## Fase 2 — Core producto ✅
 
-- [ ] CRUD módulos y procesos
-- [ ] Upload documentos (S3/Cloudinary)
-- [ ] Procesamiento PDF → chunks → embeddings
-- [ ] Chat IA con streaming real
-- [ ] Historial de conversaciones
-- [ ] Aprobación de usuarios (ADMIN)
+- [x] CRUD módulos (API + UI admin)
+- [x] CRUD procesos (API)
+- [x] Upload documentos (local + S3)
+- [x] Procesamiento PDF → chunks → embeddings
+- [x] Generación IA: documento → módulo + actividades + simulación
+- [x] Chat IA con streaming SSE
+- [x] Historial de conversaciones
+- [x] Aprobación de usuarios (ADMIN)
+- [x] Ajustes de organización con datos reales
+- [x] Onboarding guiado (`/dashboard/onboarding`)
 
-## Fase 3 — Aprendizaje (Semana 5-6)
+## Fase 3 — Aprendizaje ✅
 
-- [ ] Actividades: V/F, opción múltiple, ordenar pasos
-- [ ] Simulaciones operativas (MVP simple)
-- [ ] Tracking de progreso por empleado
-- [ ] Aprendizaje adaptativo (LearningEvent)
-- [ ] Sugerencias de repaso automáticas
+- [x] Actividades: opción múltiple, V/F, ordenar pasos, detectar errores
+- [x] Simulaciones operativas (CASE_STUDY)
+- [x] Tracking de progreso por empleado
+- [x] LearningEvent + webhooks n8n
+- [x] Sugerencias de repaso adaptativas (dashboard)
+- [x] Vista supervisor por empleado (`/dashboard/team/[id]`)
 
-## Fase 4 — Analytics y automatización (Semana 7-8)
+## Fase 4 — Analytics y automatización ✅
 
-- [ ] Dashboard de reportes (ADMIN)
-- [ ] Temas más consultados, errores frecuentes
-- [ ] Webhooks + integración n8n
-- [ ] Automatizaciones por trigger
-- [ ] Exportación de reportes
+- [x] Dashboard de reportes (ADMIN/SUPERVISOR)
+- [x] Hallazgos IA en reportes
+- [x] Webhooks n8n
+- [x] UI gestión de automatizaciones (Ajustes)
+- [x] Exportación CSV (`/api/reports/export`)
+- [x] Rate limiting en APIs de chat
 
-## Fase 5 — Producción (Semana 9+)
+## Fase 5 — Producción ✅
 
-- [ ] Tests E2E (Playwright)
-- [ ] CI/CD (GitHub Actions)
-- [ ] Observabilidad (Sentry, logs)
-- [ ] Rate limiting y seguridad
-- [ ] Onboarding empresarial guiado
-- [ ] Modo voz (futuro)
+- [x] Tests E2E (Playwright — `npm run test:e2e`)
+- [x] CI/CD (GitHub Actions — `.github/workflows/ci.yml`)
+- [x] Observabilidad (Sentry opcional — `SENTRY_DSN`)
+- [x] Rate limiting
+- [x] Onboarding empresarial guiado
+- [ ] Modo voz (futuro — post-MVP)
 
-## Métricas de éxito MVP
+## Activar en producción
 
-- Tiempo de onboarding reducido ≥ 40%
-- ≥ 80% respuestas IA con fuentes válidas
-- ≥ 3 módulos activos por organización piloto
-- NPS interno ≥ 8 en equipos de prueba
+```env
+RAG_ENABLED=true
+GEMINI_API_KEY=...
+EMBEDDING_DIMENSIONS=768
+STORAGE_PROVIDER=s3          # opcional
+AWS_S3_BUCKET=...
+N8N_WEBHOOK_URL=...          # opcional
+SENTRY_DSN=...               # opcional
+```
+
+Ejecutar `prisma/supabase-setup.sql` en Supabase.
+
+## Flujo demo
+
+1. Admin → `/dashboard/onboarding`
+2. Subir PDF en Documentos
+3. Revisar módulos/actividades generados
+4. Empleado usa Mentor IA (streaming)
+5. Supervisor revisa `/dashboard/team/[id]` y exporta reportes CSV

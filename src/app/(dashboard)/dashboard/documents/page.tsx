@@ -31,6 +31,8 @@ export default function DocumentsPage() {
               status: string;
               fileSize: number | null;
               chunkCount: number;
+              embeddingCount?: number;
+              contentGenerated?: boolean;
               createdAt: string;
               fileUrl: string | null;
             }) => ({
@@ -40,6 +42,8 @@ export default function DocumentsPage() {
               status: d.status,
               fileSize: d.fileSize,
               chunkCount: d.chunkCount,
+              embeddingCount: d.embeddingCount,
+              contentGenerated: d.contentGenerated,
               createdAt: d.createdAt,
               hasFile: !!d.fileUrl,
             })
@@ -92,6 +96,11 @@ export default function DocumentsPage() {
               <HardDrive className="h-4 w-4 text-brand-lavender" />
               <span className="font-medium">{videos.length}</span>
               <span className="text-brand-muted-gray">videos</span>
+            </div>
+            <div className="flex items-center gap-2 rounded-2xl bg-white px-4 py-2 shadow-sm ring-1 ring-black/5">
+              <Sparkles className="h-4 w-4 text-emerald-600" />
+              <span className="font-medium">{readyCount}</span>
+              <span className="text-brand-muted-gray">listos · {sizeLabel}</span>
             </div>
           </div>
         )}

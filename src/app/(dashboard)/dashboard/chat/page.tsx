@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { AIChat } from "@/components/chat/ai-chat";
 
 export default function ChatPage() {
@@ -9,7 +10,9 @@ export default function ChatPage() {
           Tu asistente contextual entrenado con la documentación de tu empresa
         </p>
       </div>
-      <AIChat />
+      <Suspense fallback={<p className="text-sm text-brand-muted-gray">Cargando chat…</p>}>
+        <AIChat />
+      </Suspense>
     </div>
   );
 }

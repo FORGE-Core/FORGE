@@ -1,29 +1,106 @@
 "use client";
 
+import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { BarChart3, Brain, Lightbulb, TrendingUp, Users } from "lucide-react";
+import {
+  BarChart3,
+  Brain,
+  Download,
+  Lightbulb,
+  TrendingUp,
+  Users,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useSession } from "next-auth/react";
 import { MetricCard } from "@/components/dashboard/metric-card";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  reportInsights,
-  reportMetrics,
-  reportRecommendations,
-} from "@/data/mock-content";
+
+type ReportsData = {
+  metrics: { label: string; value: string; change: string }[];
+  insights: string[];
+  aiInsights?: string[];
+  recommendations: string[];
+};
 
 export default function ReportsPage() {
+  const { data: session } = useSession();
+  const [data, setData] = useState<ReportsData | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/reports/overview");
+      const json = await res.json();
+      if (!res.ok) {
+        setError(json.error ?? "Sin acceso a reportes");
+        setData(null);
+        return;
+      }
+      setData(json);
+    } catch {
+      setError("Error de conexión");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const role = session?.user?.role;
+  const canView = role === "ADMIN" || role === "SUPERVISOR";
+
+  if (!canView && !loading) {
+    return (
+      <div className="space-y-4">
+        <h1 className="font-heading text-3xl font-bold">Reportes</h1>
+        <p className="text-brand-muted-gray">
+          Los reportes están disponibles para administradores y supervisores.
+        </p>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <p className="text-sm text-brand-muted-gray">Cargando reportes…</p>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="space-y-4">
+        <h1 className="font-heading text-3xl font-bold">Reportes</h1>
+        <p className="text-sm text-red-600">{error ?? "Sin datos"}</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8 pb-8">
-      <div>
-        <Badge className="mb-3">Vista ejecutiva</Badge>
-        <h1 className="font-heading text-3xl font-bold">Reportes</h1>
-        <p className="mt-1 text-brand-muted-gray">
-          Métricas, hallazgos y recomendaciones impulsadas por IA
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <Badge className="mb-3">Vista ejecutiva</Badge>
+          <h1 className="font-heading text-3xl font-bold">Reportes</h1>
+          <p className="mt-1 text-brand-muted-gray">
+            Métricas y hallazgos de tu organización
+          </p>
+        </div>
+        <Button variant="outline" asChild>
+          <a href="/api/reports/export" download>
+            <Download className="h-4 w-4" />
+            Exportar CSV
+          </a>
+        </Button>
       </div>
 
       <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-        {reportMetrics.map((m, i) => (
+        {data.metrics.map((m, i) => (
           <MetricCard
             key={m.label}
             title={m.label}
@@ -41,11 +118,11 @@ export default function ReportsPage() {
           <CardHeader>
             <div className="flex items-center gap-2">
               <Brain className="h-5 w-5 text-brand-lavender" />
-              <CardTitle>Hallazgos Inteligentes</CardTitle>
+              <CardTitle>Hallazgos inteligentes</CardTitle>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {reportInsights.map((insight, i) => (
+            {(data.aiInsights ?? data.insights).map((insight, i) => (
               <motion.div
                 key={insight}
                 initial={{ opacity: 0, x: -8 }}
@@ -63,54 +140,25 @@ export default function ReportsPage() {
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Lightbulb className="h-5 w-5 text-amber-500" />
+              <Lightbulb className="h-5 w-5 text-brand-cobalt" />
               <CardTitle>Recomendaciones</CardTitle>
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
-            {reportRecommendations.map((rec, i) => (
-              <div
+            {data.recommendations.map((rec, i) => (
+              <motion.p
                 key={rec}
-                className="flex gap-3 rounded-2xl bg-brand-light-bg px-4 py-3 text-sm"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: i * 0.08 }}
+                className="rounded-2xl bg-brand-light-bg px-4 py-3 text-sm leading-relaxed"
               >
-                <span className="font-bold text-brand-cobalt">{i + 1}.</span>
                 {rec}
-              </div>
+              </motion.p>
             ))}
           </CardContent>
         </Card>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Progreso por área (últimos 30 días)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-5">
-            {[
-              { area: "Devoluciones", pct: 53, color: "bg-amber-500" },
-              { area: "Inventario", pct: 67, color: "bg-emerald-500" },
-              { area: "Despacho", pct: 78, color: "bg-brand-cobalt" },
-              { area: "Envíos", pct: 91, color: "bg-brand-lavender" },
-            ].map((bar) => (
-              <div key={bar.area}>
-                <div className="mb-2 flex justify-between text-sm">
-                  <span>{bar.area}</span>
-                  <span className="font-semibold">{bar.pct}%</span>
-                </div>
-                <div className="h-3 overflow-hidden rounded-full bg-brand-light-bg">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${bar.pct}%` }}
-                    transition={{ duration: 0.8, delay: 0.2 }}
-                    className={`h-full rounded-full ${bar.color}`}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

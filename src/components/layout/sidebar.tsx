@@ -11,6 +11,7 @@ import {
   LogOut,
   Settings,
   User,
+  Users,
   Zap,
 } from "lucide-react";
 import Link from "next/link";
@@ -26,6 +27,12 @@ const navItems = [
   { href: "/dashboard/chat", label: "Mentor IA", icon: Bot },
   { href: "/dashboard/documents", label: "Documentos", icon: FileText },
   { href: "/dashboard/reports", label: "Reportes", icon: BarChart3 },
+  {
+    href: "/dashboard/team",
+    label: "Equipo",
+    icon: Users,
+    roles: ["ADMIN", "SUPERVISOR"] as const,
+  },
   { href: "/dashboard/profile", label: "Mi perfil", icon: User },
   { href: "/dashboard/settings", label: "Ajustes", icon: Settings },
 ];
@@ -41,6 +48,12 @@ export function Sidebar() {
       </Link>
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto">
         {navItems.map((item) => {
+          if ("roles" in item && item.roles) {
+            const userRole = session?.user?.role;
+            if (!userRole || !item.roles.includes(userRole as "ADMIN" | "SUPERVISOR")) {
+              return null;
+            }
+          }
           const active = item.exact
             ? pathname === item.href
             : pathname === item.href || pathname.startsWith(item.href + "/");

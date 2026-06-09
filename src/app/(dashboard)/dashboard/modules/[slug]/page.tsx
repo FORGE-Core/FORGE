@@ -20,16 +20,32 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import type { ModuleCardData } from "@/components/modules/module-card";
 import { ModuleVideoManager } from "@/components/modules/module-video-manager";
-import { moduleLessons, moduleResources } from "@/data/mock-content";
 import { cn } from "@/lib/utils";
 
+type LessonItem = {
+  id: string;
+  title: string;
+  duration: string;
+  completed?: boolean;
+  current?: boolean;
+};
+
+type ResourceItem = {
+  id: string;
+  name: string;
+  type: string;
+};
+
 type ModuleDetail = ModuleCardData & {
+  id: string;
   description: string | null;
   audience: string | null;
   documentId: string | null;
   videoId: string | null;
   hasVideo: boolean;
   canManage: boolean;
+  lessons?: LessonItem[];
+  resources?: ResourceItem[];
 };
 
 export default function ModuleDetailPage({
@@ -169,7 +185,7 @@ export default function ModuleDetailPage({
               <CardTitle>Lecciones del módulo</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              {moduleLessons.map((lesson) => (
+              {(trainingModule.lessons ?? []).map((lesson) => (
                 <div
                   key={lesson.id}
                   className={cn(
@@ -205,26 +221,40 @@ export default function ModuleDetailPage({
               <CardTitle>Recursos relacionados</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-3 sm:grid-cols-2">
-              {moduleResources.map((r) => (
-                <div
-                  key={r.name}
-                  className="flex items-center gap-3 rounded-2xl border border-black/5 bg-brand-light-bg px-4 py-3"
-                >
-                  {r.type === "pdf" && (
-                    <FileText className="h-5 w-5 text-red-500" />
-                  )}
-                  {r.type === "video" && (
-                    <Video className="h-5 w-5 text-brand-cobalt" />
-                  )}
-                  {r.type === "faq" && (
-                    <HelpCircle className="h-5 w-5 text-amber-500" />
-                  )}
-                  {r.type === "doc" && (
-                    <FileText className="h-5 w-5 text-brand-cobalt" />
-                  )}
-                  <span className="text-sm font-medium">{r.name}</span>
-                </div>
-              ))}
+              {(trainingModule.resources ?? []).length === 0 ? (
+                <p className="text-sm text-brand-muted-gray col-span-2">
+                  Sin recursos adjuntos. Consulta el mentor IA o los documentos
+                  de la empresa.
+                </p>
+              ) : (
+                (trainingModule.resources ?? []).map((r) => (
+                  <a
+                    key={r.id}
+                    href={
+                      r.type === "pdf" || r.type === "video"
+                        ? `/api/documents/${r.id}/file`
+                        : undefined
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 rounded-2xl border border-black/5 bg-brand-light-bg px-4 py-3 hover:border-brand-cobalt/20"
+                  >
+                    {r.type === "pdf" && (
+                      <FileText className="h-5 w-5 text-red-500" />
+                    )}
+                    {r.type === "video" && (
+                      <Video className="h-5 w-5 text-brand-cobalt" />
+                    )}
+                    {r.type === "faq" && (
+                      <HelpCircle className="h-5 w-5 text-amber-500" />
+                    )}
+                    {r.type === "doc" && (
+                      <FileText className="h-5 w-5 text-brand-cobalt" />
+                    )}
+                    <span className="text-sm font-medium">{r.name}</span>
+                  </a>
+                ))
+              )}
             </CardContent>
           </Card>
         </div>
@@ -254,14 +284,37 @@ export default function ModuleDetailPage({
                 <ProgressBar value={trainingModule.progress} />
               </div>
               <Button className="w-full" variant="outline" asChild>
-                <Link href="/dashboard/chat">
+                <Link
+                  href={`/dashboard/chat?prompt=${encodeURIComponent(
+                    `Resume en 5 puntos el módulo "${trainingModule.title}"`
+                  )}`}
+                >
+                  <Sparkles className="h-4 w-4" />
+                  Resumir módulo
+                </Link>
+              </Button>
+              <Button className="w-full" variant="outline" asChild>
+                <Link
+                  href={`/dashboard/chat?prompt=${encodeURIComponent(
+                    `Explícame de forma sencilla el módulo "${trainingModule.title}"`
+                  )}`}
+                >
                   <Bot className="h-4 w-4" />
                   Explícamelo más fácil
                 </Link>
               </Button>
               <Button className="w-full" asChild>
-                <Link href="/dashboard/chat">
+                <Link
+                  href={`/dashboard/chat?prompt=${encodeURIComponent(
+                    `Dame un ejemplo práctico del módulo "${trainingModule.title}"`
+                  )}`}
+                >
                   Generar ejemplo práctico
+                </Link>
+              </Button>
+              <Button className="w-full" variant="outline" asChild>
+                <Link href={`/dashboard/activities?moduleId=${trainingModule.id}`}>
+                  Hacer quiz del módulo
                 </Link>
               </Button>
             </CardContent>

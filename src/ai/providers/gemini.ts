@@ -139,6 +139,66 @@ export function createGeminiProvider(
       );
     },
 
+    async *chatStream({
+      messages,
+      temperature = 0.3,
+      maxTokens = 2048,
+    }: ChatCompletionOptions) {
+      const { systemInstruction, contents } = toGeminiContents(messages);
+      const payload = {
+        contents,
+        ...(systemInstruction && {
+          systemInstruction: { parts: [{ text: systemInstruction }] },
+        }),
+        generationConfig: {
+          temperature,
+          maxOutputTokens: maxTokens,
+        },
+      };
+
+      const model = chatModels[0];
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${encodeURIComponent(apiKey)}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (!res.ok) await parseGeminiError(res, `Gemini stream [${model}]`);
+      if (!res.body) throw new Error("Gemini stream: sin cuerpo de respuesta");
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const jsonStr = line.slice(6).trim();
+          if (!jsonStr || jsonStr === "[DONE]") continue;
+          try {
+            const data = JSON.parse(jsonStr) as {
+              candidates?: { content?: { parts?: { text?: string }[] } }[];
+            };
+            const text = data.candidates?.[0]?.content?.parts
+              ?.map((p) => p.text ?? "")
+              .join("");
+            if (text) yield text;
+          } catch {
+            /* fragmento SSE incompleto */
+          }
+        }
+      }
+    },
+
     async embed({ input }: EmbeddingOptions) {
       const texts = Array.isArray(input) ? input : [input];
       const modelPath = embedModel.startsWith("models/")

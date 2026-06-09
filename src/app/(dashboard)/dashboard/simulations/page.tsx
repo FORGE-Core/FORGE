@@ -1,21 +1,82 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Brain, Gamepad2, Star } from "lucide-react";
-import { simulation } from "@/data/mock-content";
+import { Brain, Gamepad2, Loader2, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { cn } from "@/lib/utils";
 
+type Simulation = {
+  id: string;
+  title: string;
+  scenario: string;
+  options: { id: string; label: string; text: string; score: number }[];
+  aiAnalysis: string;
+};
+
 export default function SimulationsPage() {
+  const [simulation, setSimulation] = useState<Simulation | null>(null);
+  const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<string | null>(null);
   const [finished, setFinished] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const chosen = simulation.options.find((o) => o.id === selected);
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/simulations");
+      const data = await res.json();
+      if (res.ok && data.simulation) setSimulation(data.simulation);
+    } catch {
+      setSimulation(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const chosen = simulation?.options.find((o) => o.id === selected);
   const score = chosen?.score ?? 0;
+
+  async function handleFinish() {
+    if (!simulation || !selected) return;
+    setSubmitting(true);
+    try {
+      await fetch(`/api/simulations/${simulation.id}/attempt`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ selectedId: selected }),
+      });
+    } catch {
+      /* resultado local igualmente */
+    } finally {
+      setSubmitting(false);
+      setFinished(true);
+    }
+  }
+
+  if (loading) {
+    return (
+      <p className="text-sm text-brand-muted-gray flex items-center gap-2">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Cargando simulación…
+      </p>
+    );
+  }
+
+  if (!simulation) {
+    return (
+      <p className="text-sm text-brand-muted-gray">
+        No hay simulaciones disponibles.
+      </p>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-3xl space-y-8 pb-8">
@@ -23,7 +84,7 @@ export default function SimulationsPage() {
         <Badge className="mb-3">Simulación práctica</Badge>
         <h1 className="font-heading text-3xl font-bold">Simulaciones</h1>
         <p className="mt-1 text-brand-muted-gray">
-          Toma decisiones reales y recibe feedback de la IA
+          Toma decisiones reales y recibe feedback
         </p>
       </div>
 
@@ -63,8 +124,12 @@ export default function SimulationsPage() {
           ) : null}
 
           {!finished && selected && (
-            <Button className="w-full" onClick={() => setFinished(true)}>
-              Ver resultado y análisis IA
+            <Button
+              className="w-full"
+              disabled={submitting}
+              onClick={handleFinish}
+            >
+              {submitting ? "Guardando…" : "Ver resultado y análisis"}
             </Button>
           )}
 
@@ -103,18 +168,11 @@ export default function SimulationsPage() {
                   <CardHeader>
                     <div className="flex items-center gap-2">
                       <Brain className="h-5 w-5 text-brand-cobalt" />
-                      <CardTitle className="text-base">Análisis IA</CardTitle>
+                      <CardTitle className="text-base">Análisis</CardTitle>
                     </div>
                   </CardHeader>
-                  <CardContent className="space-y-4 text-sm leading-relaxed">
+                  <CardContent className="text-sm leading-relaxed">
                     <p>{simulation.aiAnalysis}</p>
-                    <div className="rounded-2xl bg-white px-4 py-3">
-                      <p className="font-medium text-brand-cobalt">Mejora recomendada</p>
-                      <p className="mt-1 text-brand-muted-gray">
-                        Practica el módulo de devoluciones y repite esta simulación para
-                        consolidar el flujo de verificación.
-                      </p>
-                    </div>
                   </CardContent>
                 </Card>
 
@@ -124,9 +182,10 @@ export default function SimulationsPage() {
                   onClick={() => {
                     setSelected(null);
                     setFinished(false);
+                    load();
                   }}
                 >
-                  Intentar otro escenario
+                  Intentar de nuevo
                 </Button>
               </motion.div>
             )}

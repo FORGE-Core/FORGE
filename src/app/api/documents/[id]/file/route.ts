@@ -1,11 +1,10 @@
-import fs from "fs/promises";
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import {
   EMPLOYEE_VISIBLE_DOCUMENT_TYPES,
   isAdmin,
 } from "@/lib/auth/roles";
-import { resolveStoredFilePath } from "@/lib/document-storage";
+import { readStoredFile, storedFileExists } from "@/lib/document-storage";
 import { getOrganizationDocument } from "@/lib/documents";
 
 export const runtime = "nodejs";
@@ -53,24 +52,20 @@ export async function GET(
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 
-    const absolutePath = resolveStoredFilePath(document.fileUrl);
-
-    try {
-      await fs.access(absolutePath);
-    } catch {
+    if (!(await storedFileExists(document.fileUrl))) {
       return NextResponse.json(
         { error: "El archivo ya no existe en el servidor" },
         { status: 404 }
       );
     }
 
-    const buffer = await fs.readFile(absolutePath);
+    const buffer = await readStoredFile(document.fileUrl);
     const ext = fileExtension(document.mimeType, document.type);
     const filename = `${safeFilename(document.title)}${ext}`;
     const isVideo = document.type === "VIDEO";
     const disposition = isVideo ? "inline" : "attachment";
 
-    return new NextResponse(buffer, {
+    return new NextResponse(new Uint8Array(buffer), {
       headers: {
         "Content-Type": document.mimeType ?? (isVideo ? "video/mp4" : "application/pdf"),
         "Content-Disposition": `${disposition}; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`,

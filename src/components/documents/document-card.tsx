@@ -8,6 +8,7 @@ import {
   FileText,
   Loader2,
   MoreVertical,
+  Sparkles,
   Trash2,
   Video,
   X,
@@ -51,6 +52,7 @@ type DocumentCardProps = {
   index: number;
   canManage?: boolean;
   onDeleted: () => void;
+  onRefresh?: () => void;
 };
 
 export function DocumentCard({
@@ -58,11 +60,13 @@ export function DocumentCard({
   index,
   canManage = false,
   onDeleted,
+  onRefresh,
 }: DocumentCardProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showVideo, setShowVideo] = useState(false);
 
@@ -92,6 +96,23 @@ export function DocumentCard({
       setError(err instanceof Error ? err.message : "Error al descargar");
     } finally {
       setDownloading(false);
+    }
+  }
+
+  async function handleGenerate() {
+    setGenerating(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/documents/${doc.id}/generate`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Error al generar");
+      onRefresh?.();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al generar contenido");
+    } finally {
+      setGenerating(false);
     }
   }
 
@@ -224,29 +245,52 @@ export function DocumentCard({
             ) : (
               <>
                 {canManage && (
-                  <ul className="grid gap-2 sm:grid-cols-3">
-                    <li className="flex items-center gap-2 rounded-xl bg-brand-light-bg px-3 py-2 text-sm">
-                      <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
-                      <span className="text-brand-muted-gray">Fragmentos</span>
-                      <span className="ml-auto font-semibold">
-                        {doc.chunkCount}
-                      </span>
-                    </li>
-                    <li className="flex items-center gap-2 rounded-xl bg-brand-light-bg px-3 py-2 text-sm">
-                      <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
-                      <span className="text-brand-muted-gray">Mentor IA</span>
-                      <span className="ml-auto font-medium text-emerald-600">
-                        {doc.chunkCount > 0 ? "Activo" : "—"}
-                      </span>
-                    </li>
-                    <li className="flex items-center gap-2 rounded-xl bg-brand-light-bg px-3 py-2 text-sm">
-                      <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
-                      <span className="text-brand-muted-gray">Alcance</span>
-                      <span className="ml-auto text-xs font-medium">
-                        Solo tu empresa
-                      </span>
-                    </li>
+                  <ul className="grid gap-2 sm:grid-cols-2">
+                    {[
+                      { label: "Procesado", ok: doc.status === "READY" },
+                      { label: "Chunks creados", ok: doc.chunkCount > 0 },
+                      {
+                        label: "Embeddings generados",
+                        ok: (doc.embeddingCount ?? 0) > 0 || doc.chunkCount > 0,
+                      },
+                      { label: "Disponible para IA", ok: doc.chunkCount > 0 },
+                      {
+                        label: "Actividades generadas",
+                        ok: !!doc.contentGenerated,
+                      },
+                    ].map((step) => (
+                      <li
+                        key={step.label}
+                        className="flex items-center gap-2 rounded-xl bg-brand-light-bg px-3 py-2 text-sm"
+                      >
+                        <CheckCircle2
+                          className={cn(
+                            "h-4 w-4 shrink-0",
+                            step.ok ? "text-emerald-500" : "text-brand-muted-gray/40"
+                          )}
+                        />
+                        <span className="text-brand-muted-gray">{step.label}</span>
+                        <span className="ml-auto text-xs font-medium">
+                          {step.ok ? "✔" : "—"}
+                        </span>
+                      </li>
+                    ))}
                   </ul>
+                )}
+                {canManage && doc.chunkCount > 0 && !doc.contentGenerated && (
+                  <Button
+                    size="sm"
+                    className="w-full sm:w-auto"
+                    disabled={generating}
+                    onClick={handleGenerate}
+                  >
+                    {generating ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-4 w-4" />
+                    )}
+                    Generar módulo y actividades con IA
+                  </Button>
                 )}
                 {canDownload && (
                   <Button

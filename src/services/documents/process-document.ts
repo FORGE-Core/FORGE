@@ -1,5 +1,6 @@
 import { chunkText } from "@/ai/rag/chunker";
 import { db } from "@/lib/db";
+import { embedDocumentChunks } from "@/lib/vector/store-chunk-embeddings";
 import { extractText, getDocumentProxy } from "unpdf";
 
 export async function extractPdfText(buffer: Buffer): Promise<string> {
@@ -54,6 +55,25 @@ export async function processDocumentContent({
       },
     });
   });
+
+  const { embedded, skipped } = await embedDocumentChunks(
+    documentId,
+    organizationId
+  );
+
+  if (!skipped && embedded > 0) {
+    await db.document.update({
+      where: { id: documentId },
+      data: {
+        metadata: {
+          chunkCount: chunks.length,
+          embeddingCount: embedded,
+          embeddingsAt: new Date().toISOString(),
+          processedAt: new Date().toISOString(),
+        },
+      },
+    });
+  }
 
   return chunks.length;
 }

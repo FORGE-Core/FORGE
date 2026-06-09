@@ -1,7 +1,15 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowRight, Brain, LineChart, Shield, Zap } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  Brain,
+  CheckCircle2,
+  LineChart,
+  Shield,
+  Zap,
+} from "lucide-react";
 import Link from "next/link";
 import { Navbar } from "@/components/layout/navbar";
 import { Button } from "@/components/ui/button";
@@ -51,8 +59,8 @@ export default function HomePage() {
             transition={{ delay: 0.1 }}
             className="mt-6 font-heading text-5xl font-bold leading-tight tracking-tight md:text-7xl"
           >
-            Transforma tu conocimiento en{" "}
-            <span className="text-gradient">experiencias de aprendizaje</span>
+            Capacita empleados hasta{" "}
+            <span className="text-gradient">70% más rápido</span> con IA
           </motion.h1>
           <motion.p
             initial={{ opacity: 0, y: 20 }}
@@ -60,9 +68,9 @@ export default function HomePage() {
             transition={{ delay: 0.2 }}
             className="mx-auto mt-6 max-w-2xl text-lg text-brand-muted-gray"
           >
-            FORGE convierte manuales, procesos y documentación en capacitación
-            interactiva con IA. No es un chatbot — es un ecosistema de aprendizaje
-            inteligente para equipos de alta rotación.
+            Transforma documentos empresariales en experiencias inteligentes de
+            aprendizaje. FORGE convierte manuales y procesos en capacitación
+            medible con mentor IA contextual.
           </motion.p>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -71,15 +79,68 @@ export default function HomePage() {
             className="mt-10 flex flex-wrap items-center justify-center gap-4"
           >
             <Button size="lg" asChild>
-              <Link href="/register">
-                Comenzar gratis
+              <Link href="mailto:demo@forge.app?subject=Solicitar%20demo">
+                Solicitar demo
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
             <Button size="lg" variant="outline" asChild>
-              <Link href="/login">Ver demo</Link>
+              <Link href="/login">Ver plataforma</Link>
+            </Button>
+            <Button size="lg" variant="ghost" asChild>
+              <Link href="/register">Comenzar gratis</Link>
             </Button>
           </motion.div>
+        </div>
+      </section>
+
+      <section className="px-6 py-20">
+        <div className="mx-auto grid max-w-6xl gap-12 md:grid-cols-3">
+          <div>
+            <h2 className="font-heading text-2xl font-bold">El problema</h2>
+            <ul className="mt-6 space-y-4 text-brand-muted-gray">
+              {[
+                "Capacitación lenta y dependiente de supervisores",
+                "Errores operativos por procesos mal entendidos",
+                "Manuales que nadie lee hasta que algo falla",
+              ].map((item) => (
+                <li key={item} className="flex gap-3">
+                  <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <h2 className="font-heading text-2xl font-bold">La solución</h2>
+            <ul className="mt-6 space-y-4 text-brand-muted-gray">
+              {[
+                "IA que responde solo con tu documentación oficial",
+                "Simulaciones y quizzes generados desde tus manuales",
+                "Reportes de progreso y temas problemáticos",
+              ].map((item) => (
+                <li key={item} className="flex gap-3">
+                  <Brain className="mt-0.5 h-5 w-5 shrink-0 text-brand-cobalt" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <h2 className="font-heading text-2xl font-bold">Beneficios</h2>
+            <ul className="mt-6 space-y-4 text-brand-muted-gray">
+              {[
+                "Onboarding hasta 70% más rápido",
+                "Menos errores en operaciones diarias",
+                "Aprendizaje medible por empleado y equipo",
+              ].map((item) => (
+                <li key={item} className="flex gap-3">
+                  <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-500" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </section>
 

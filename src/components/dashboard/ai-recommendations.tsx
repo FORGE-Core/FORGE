@@ -3,11 +3,16 @@
 import { motion } from "framer-motion";
 import { Brain, ChevronRight } from "lucide-react";
 import Link from "next/link";
-import { aiRecommendations } from "@/data/mock-content";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-export function AIRecommendations() {
+export function AIRecommendations({
+  items,
+}: {
+  items: { topic: string; reason: string; slug?: string }[];
+}) {
+  if (items.length === 0) return null;
+
   return (
     <Card className="border-brand-lavender/20 bg-gradient-to-br from-white to-brand-champagne/40">
       <CardHeader>
@@ -15,7 +20,7 @@ export function AIRecommendations() {
           <div className="flex h-9 w-9 items-center justify-center rounded-xl gradient-brand">
             <Brain className="h-4 w-4 text-white" />
           </div>
-          <CardTitle>Recomendaciones Inteligentes</CardTitle>
+          <CardTitle>Recomendaciones inteligentes</CardTitle>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -23,7 +28,7 @@ export function AIRecommendations() {
           La IA detectó oportunidades de mejora en los siguientes temas:
         </p>
         <ul className="space-y-3">
-          {aiRecommendations.map((rec, i) => (
+          {items.map((rec, i) => (
             <motion.li
               key={rec.topic}
               initial={{ opacity: 0, x: -8 }}
@@ -37,7 +42,13 @@ export function AIRecommendations() {
           ))}
         </ul>
         <Button className="w-full" asChild>
-          <Link href="/dashboard/modules">
+          <Link
+            href={
+              items[0]?.slug
+                ? `/dashboard/modules/${items[0].slug}`
+                : "/dashboard/modules"
+            }
+          >
             Reforzar conocimientos
             <ChevronRight className="h-4 w-4" />
           </Link>

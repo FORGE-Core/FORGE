@@ -1,8 +1,9 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import bcrypt from "bcryptjs";
-import { PrismaClient, UserRole } from "@prisma/client";
+import { Prisma, PrismaClient, UserRole } from "@prisma/client";
 import { chunkText } from "@/ai/rag/chunker";
+import { embedDocumentChunks } from "@/lib/vector/store-chunk-embeddings";
 import type { TenantDefinition } from "./types";
 
 const TENANTS_ROOT = path.join(process.cwd(), "tenants");
@@ -30,13 +31,13 @@ export async function seedTenant(db: PrismaClient, tenant: TenantDefinition) {
       slug: orgData.slug,
       industry: orgData.industry,
       logoUrl: orgData.logoUrl ?? undefined,
-      settings: orgData.settings,
+      settings: orgData.settings as Prisma.InputJsonValue,
     },
     update: {
       name: orgData.name,
       industry: orgData.industry,
       logoUrl: orgData.logoUrl ?? undefined,
-      settings: orgData.settings,
+      settings: orgData.settings as Prisma.InputJsonValue,
     },
   });
 
@@ -174,7 +175,10 @@ export async function seedTenant(db: PrismaClient, tenant: TenantDefinition) {
       });
     });
 
-    console.log(`   ✓ ${mod.title} — ${chunks.length} fragmentos`);
+    const { embedded } = await embedDocumentChunks(document!.id, org.id);
+    console.log(
+      `   ✓ ${mod.title} — ${chunks.length} fragmentos${embedded > 0 ? `, ${embedded} embeddings` : ""}`
+    );
   }
 
   const readmeTitle = "Índice del programa de capacitación";

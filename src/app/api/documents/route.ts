@@ -8,10 +8,12 @@ import {
 } from "@/lib/auth/roles";
 import { db } from "@/lib/db";
 import { saveOrganizationFile } from "@/lib/document-storage";
+import { logLearningEvent } from "@/lib/learning/events";
 import {
   extractPdfText,
   processDocumentContent,
 } from "@/services/documents/process-document";
+import { generateLearningContentFromDocument } from "@/services/ai/generate-learning-content";
 
 export const runtime = "nodejs";
 
@@ -89,6 +91,16 @@ export async function GET() {
         mimeType: doc.mimeType,
         fileSize: doc.fileSize,
         chunkCount: doc._count.chunks,
+        embeddingCount:
+          typeof doc.metadata === "object" &&
+          doc.metadata &&
+          "embeddingCount" in doc.metadata
+            ? Number((doc.metadata as { embeddingCount?: number }).embeddingCount)
+            : 0,
+        contentGenerated:
+          typeof doc.metadata === "object" &&
+          doc.metadata &&
+          "learningContentGeneratedAt" in doc.metadata,
         createdAt: doc.createdAt,
         fileUrl: doc.fileUrl,
         hasFile: !!doc.fileUrl,
@@ -177,6 +189,18 @@ export async function POST(req: Request) {
 
       let chunkCount = 0;
 
+      const moduleId = (formData.get("moduleId") as string)?.trim() || undefined;
+      if (moduleId) {
+        await db.document.update({
+          where: { id: document.id },
+          data: { moduleId },
+        });
+      }
+
+      let generated: Awaited<
+        ReturnType<typeof generateLearningContentFromDocument>
+      > | null = null;
+
       if (pdf) {
         const text = await extractPdfText(buffer);
         chunkCount = await processDocumentContent({
@@ -184,6 +208,30 @@ export async function POST(req: Request) {
           documentId: document.id,
           text,
         });
+
+        const autoGenerate = formData.get("autoGenerate") !== "false";
+        if (autoGenerate && chunkCount > 0) {
+          try {
+            generated = await generateLearningContentFromDocument({
+              organizationId,
+              documentId: document.id,
+              moduleId,
+            });
+            await logLearningEvent({
+              organizationId,
+              userId: adminCheck.session.user.id!,
+              eventType: "DOCUMENT_CONTENT_GENERATED",
+              payload: {
+                documentId: document.id,
+                moduleId: generated.moduleId,
+                items: generated.created,
+                auto: true,
+              },
+            });
+          } catch (genErr) {
+            console.warn("[documents] auto-generación omitida:", genErr);
+          }
+        }
       } else {
         await db.document.update({
           where: { id: document.id },
@@ -212,6 +260,7 @@ export async function POST(req: Request) {
           fileSize: updated!.fileSize,
           createdAt: updated!.createdAt,
         },
+        generated,
       });
     } catch (processError) {
       console.error("[documents POST process]", processError);

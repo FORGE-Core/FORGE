@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Award,
@@ -13,17 +14,11 @@ import Link from "next/link";
 import { WelcomeHero } from "@/components/dashboard/welcome-hero";
 import { AIRecommendations } from "@/components/dashboard/ai-recommendations";
 import { MetricCard } from "@/components/dashboard/metric-card";
-import { ModuleCard } from "@/components/modules/module-card";
+import { ModuleCard, type ModuleCardData } from "@/components/modules/module-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProgressBar } from "@/components/ui/progress-bar";
-import {
-  currentUser,
-  dashboardKpis,
-  recentActivity,
-  trainingModules,
-} from "@/data/mock-content";
 
 const kpiIcons = {
   book: BookOpen,
@@ -41,15 +36,74 @@ const activityIcons: Record<string, string> = {
   sim: "🎮",
 };
 
+type DashboardData = {
+  user: {
+    name: string;
+    fullName: string;
+    overallProgress: number;
+    level: number;
+    levelTitle: string;
+    pendingCount: number;
+  };
+  kpis: {
+    title: string;
+    value: string;
+    change: string;
+    trend: "up" | "down" | "neutral";
+    icon: string;
+  }[];
+  recentActivity: { id: string; text: string; time: string; type: string }[];
+  recommendations: { topic: string; reason: string; slug?: string }[];
+  featuredModules: ModuleCardData[];
+  highlightModules: ModuleCardData[];
+  nextModule: { title: string; slug: string } | null;
+};
+
 export default function DashboardPage() {
-  const featuredModules = trainingModules.filter((m) => m.status !== "completed").slice(0, 3);
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/dashboard");
+      const json = await res.json();
+      if (res.ok) setData(json);
+    } catch {
+      setData(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  if (loading) {
+    return (
+      <p className="text-sm text-brand-muted-gray">Cargando tu dashboard…</p>
+    );
+  }
+
+  if (!data) {
+    return (
+      <p className="text-sm text-red-600">
+        No se pudo cargar el dashboard. Recarga la página.
+      </p>
+    );
+  }
 
   return (
     <div className="space-y-8 pb-8">
-      <WelcomeHero />
+      <WelcomeHero
+        name={data.user.name}
+        pendingCount={data.user.pendingCount}
+        overallProgress={data.user.overallProgress}
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-        {dashboardKpis.map((kpi, i) => {
+        {data.kpis.map((kpi, i) => {
           const Icon = kpiIcons[kpi.icon as keyof typeof kpiIcons] ?? BookOpen;
           return (
             <MetricCard
@@ -73,55 +127,69 @@ export default function DashboardPage() {
           <CardContent className="space-y-6">
             <div className="flex flex-wrap items-center gap-4">
               <div className="flex h-16 w-16 items-center justify-center rounded-2xl gradient-brand text-2xl font-bold text-white">
-                {currentUser.level}
+                {data.user.level}
               </div>
               <div>
                 <p className="font-heading text-xl font-bold">
-                  Nivel {currentUser.level} — {currentUser.levelTitle}
+                  Nivel {data.user.level} — {data.user.levelTitle}
                 </p>
                 <p className="text-brand-muted-gray">
-                  {currentUser.overallProgress}% completado
+                  {data.user.overallProgress}% completado
                 </p>
               </div>
             </div>
-            <ProgressBar value={currentUser.overallProgress} size="lg" />
-            <div className="rounded-2xl border border-brand-cobalt/10 bg-brand-champagne/50 px-4 py-4">
-              <p className="text-xs font-medium uppercase tracking-wide text-brand-cobalt">
-                Próximo objetivo
-              </p>
-              <p className="mt-1 font-medium">Completar módulo de devoluciones</p>
-              <Button size="sm" className="mt-3" variant="outline" asChild>
-                <Link href="/dashboard/modules/manejo-devoluciones">Continuar</Link>
-              </Button>
-            </div>
+            <ProgressBar value={data.user.overallProgress} size="lg" />
+            {data.nextModule && (
+              <div className="rounded-2xl border border-brand-cobalt/10 bg-brand-champagne/50 px-4 py-4">
+                <p className="text-xs font-medium uppercase tracking-wide text-brand-cobalt">
+                  Próximo objetivo
+                </p>
+                <p className="mt-1 font-medium">
+                  Completar módulo: {data.nextModule.title}
+                </p>
+                <Button size="sm" className="mt-3" variant="outline" asChild>
+                  <Link href={`/dashboard/modules/${data.nextModule.slug}`}>
+                    Continuar
+                  </Link>
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        <AIRecommendations />
+        <AIRecommendations items={data.recommendations} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Actividad reciente</CardTitle>
-            <Badge variant="muted">Esta semana</Badge>
+            <Badge variant="muted">Reciente</Badge>
           </CardHeader>
           <CardContent className="space-y-3">
-            {recentActivity.map((item, i) => (
-              <motion.div
-                key={item.id}
-                initial={{ opacity: 0, x: -8 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.06 }}
-                className="flex gap-3 rounded-2xl bg-brand-light-bg px-4 py-3"
-              >
-                <span className="text-lg">{activityIcons[item.type]}</span>
-                <div>
-                  <p className="text-sm font-medium">{item.text}</p>
-                  <p className="text-xs text-brand-muted-gray">{item.time}</p>
-                </div>
-              </motion.div>
-            ))}
+            {data.recentActivity.length === 0 ? (
+              <p className="text-sm text-brand-muted-gray">
+                Aún no hay actividad. Explora un módulo o pregunta al mentor IA.
+              </p>
+            ) : (
+              data.recentActivity.map((item, i) => (
+                <motion.div
+                  key={item.id}
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.06 }}
+                  className="flex gap-3 rounded-2xl bg-brand-light-bg px-4 py-3"
+                >
+                  <span className="text-lg">
+                    {activityIcons[item.type] ?? "📌"}
+                  </span>
+                  <div>
+                    <p className="text-sm font-medium">{item.text}</p>
+                    <p className="text-xs text-brand-muted-gray">{item.time}</p>
+                  </div>
+                </motion.div>
+              ))
+            )}
           </CardContent>
         </Card>
 
@@ -133,7 +201,7 @@ export default function DashboardPage() {
             </Button>
           </CardHeader>
           <CardContent className="space-y-4">
-            {featuredModules.map((m) => (
+            {data.featuredModules.map((m) => (
               <Link
                 key={m.slug}
                 href={`/dashboard/modules/${m.slug}`}
@@ -165,7 +233,7 @@ export default function DashboardPage() {
           </Button>
         </div>
         <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-          {trainingModules.slice(0, 3).map((m, i) => (
+          {data.highlightModules.map((m, i) => (
             <ModuleCard key={m.slug} module={m} index={i} />
           ))}
         </div>

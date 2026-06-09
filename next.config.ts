@@ -3,8 +3,7 @@ import path from "path";
 
 const nextConfig: NextConfig = {
   outputFileTracingRoot: path.join(__dirname),
-  // Evita que Next empaquete mal el worker de PDF.js
-  serverExternalPackages: ["unpdf"],
+  serverExternalPackages: ["unpdf", "@aws-sdk/client-s3"],
   turbopack: {
     root: path.join(__dirname),
   },
