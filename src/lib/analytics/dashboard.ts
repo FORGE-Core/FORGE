@@ -1,3 +1,5 @@
+import { getAlaeContextForUser } from "@/lib/alae/accessibility-profile";
+import { buildAlaeRecommendations } from "@/lib/alae/recommendations";
 import { db } from "@/lib/db";
 import { getOrganizationModules } from "@/lib/training/modules";
 import { formatDuration } from "@/lib/training/format";
@@ -195,6 +197,28 @@ export async function getDashboardData(
     modules.find((m) => m.status === "in_progress") ??
     modules.find((m) => m.status === "pending");
 
+  const alaeContext = await getAlaeContextForUser(userId, organizationId);
+  const alaeRecommendations = buildAlaeRecommendations({
+    preferredModality: alaeContext.learning.preferredModality,
+    supportLevel: alaeContext.learning.supportLevel,
+    declaredNeeds: alaeContext.declaredNeeds,
+    pendingModule: nextModule
+      ? { title: nextModule.title, slug: nextModule.slug }
+      : null,
+  });
+
+  const mergedRecommendations = [
+    ...alaeRecommendations.map((r) => ({
+      topic: r.topic,
+      reason: r.reason,
+      slug: r.href.includes("/modules/")
+        ? r.href.split("/modules/")[1]
+        : undefined,
+      href: r.href,
+    })),
+    ...recommendations,
+  ].slice(0, 4);
+
   const firstName = userName?.split(" ")[0] ?? "equipo";
   const level = Math.min(10, Math.max(1, Math.floor(overallProgress / 10) + 1));
 
@@ -220,7 +244,14 @@ export async function getDashboardData(
     },
     kpis,
     recentActivity: recentActivity.slice(0, 6),
-    recommendations,
+    recommendations: mergedRecommendations,
+    alae: {
+      preferredModality: alaeContext.learning.preferredModality,
+      supportLevel: alaeContext.learning.supportLevel,
+      simplifiedLanguage: alaeContext.accessibility.simplifiedLanguage,
+      stepByStepMode: alaeContext.accessibility.stepByStepMode,
+      recommendations: alaeRecommendations,
+    },
     featuredModules: modules
       .filter((m) => m.status !== "completed")
       .slice(0, 3),

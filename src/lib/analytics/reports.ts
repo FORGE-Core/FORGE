@@ -22,6 +22,7 @@ export async function getReportsOverview(
     failedAttempts,
     weakModules,
     learningEvents,
+    inclusionAudits,
   ] = await Promise.all([
     db.user.count({
       where: { organizationId, status: "ACTIVE" },
@@ -57,7 +58,21 @@ export async function getReportsOverview(
       orderBy: { _count: { eventType: "desc" } },
       take: 5,
     }),
+    db.inclusionAudit.findMany({
+      where: { organizationId },
+      select: { overallScore: true },
+      take: 100,
+      orderBy: { auditedAt: "desc" },
+    }),
   ]);
+
+  const inclusionAverage =
+    inclusionAudits.length > 0
+      ? Math.round(
+          inclusionAudits.reduce((s, a) => s + a.overallScore, 0) /
+            inclusionAudits.length
+        )
+      : null;
 
   const moduleTitles = await db.trainingModule.findMany({
     where: {
@@ -138,11 +153,21 @@ export async function getReportsOverview(
       : "Programa simulaciones prácticas por turno.",
   ];
 
+  if (inclusionAverage !== null && inclusionAverage < 65) {
+    recommendations.unshift(
+      `Inclusion Score promedio bajo (${inclusionAverage}%). Revisa documentos en ALAE.`
+    );
+  }
+
   return {
     metrics,
     insights,
     aiInsights:
       aiInsights.length > 0 ? aiInsights : insights.slice(0, 3),
     recommendations,
+    inclusion: {
+      averageScore: inclusionAverage,
+      auditCount: inclusionAudits.length,
+    },
   };
 }

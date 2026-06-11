@@ -17,6 +17,11 @@ export const metadata: Metadata = {
   title: "FORGE— Capacitación empresarial inteligente",
   description:
     "Plataforma SaaS de onboarding y capacitación con IA contextual para empresas de logística y operaciones.",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "FORGE",
+  },
 };
 
 export default function RootLayout({
@@ -26,6 +31,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" className={`${inter.variable} ${jakarta.variable}`}>
+      <head>
+        <link rel="apple-touch-icon" href="/icons/icon.svg" />
+      </head>
       <body>
         <Providers>{children}</Providers>
       </body>

@@ -62,4 +62,42 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   adapter: PrismaAdapter(db),
   providers,
+  callbacks: {
+    ...authConfig.callbacks,
+    async signIn({ user, account }) {
+      if (account?.provider === "google") {
+        const email = user.email?.toLowerCase().trim();
+        if (!email) return "/login?error=GoogleAccountNotLinked";
+
+        const existing = await db.user.findUnique({ where: { email } });
+        if (!existing?.organizationId) {
+          return "/login?error=GoogleAccountNotLinked";
+        }
+        if (existing.status !== "ACTIVE") {
+          return "/login?error=AccountPending";
+        }
+      }
+      return true;
+    },
+    async jwt({ token, user, account }) {
+      if (user?.email && account?.provider === "google") {
+        const dbUser = await db.user.findUnique({
+          where: { email: user.email.toLowerCase().trim() },
+        });
+        if (dbUser) {
+          token.id = dbUser.id;
+          token.organizationId = dbUser.organizationId;
+          token.role = dbUser.role;
+        }
+        return token;
+      }
+
+      if (user) {
+        token.id = user.id;
+        token.organizationId = user.organizationId;
+        token.role = user.role;
+      }
+      return token;
+    },
+  },
 });

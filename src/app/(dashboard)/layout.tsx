@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { NovaWidget } from "@/components/nova/nova-widget";
+import { AlaeDashboardShell } from "@/components/alae/alae-dashboard-shell";
+import { DashboardChrome } from "@/components/layout/dashboard-chrome";
 import { Sidebar } from "@/components/layout/sidebar";
 
 export default async function DashboardLayout({
@@ -12,10 +13,19 @@ export default async function DashboardLayout({
   if (!session?.user) redirect("/login");
 
   return (
-    <div className="flex min-h-screen bg-brand-light-bg">
-      <Sidebar />
-      <main className="flex-1 overflow-auto p-6 md:p-8">{children}</main>
-      <NovaWidget />
-    </div>
+    <AlaeDashboardShell>
+      <div className="flex min-h-screen">
+        <Sidebar />
+        <main
+          id="main-content"
+          className="min-w-0 flex-1 overflow-auto p-4 md:p-6 lg:p-8"
+          role="main"
+          tabIndex={-1}
+        >
+          {children}
+        </main>
+        <DashboardChrome />
+      </div>
+    </AlaeDashboardShell>
   );
 }

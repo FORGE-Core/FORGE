@@ -75,5 +75,20 @@ export async function processDocumentContent({
     });
   }
 
+  try {
+    const { auditContentInclusion, saveInclusionAudit } = await import(
+      "@/lib/alae/inclusion-scorer"
+    );
+    const result = await auditContentInclusion(text, true);
+    await saveInclusionAudit({
+      organizationId,
+      targetType: "DOCUMENT",
+      targetId: documentId,
+      result,
+    });
+  } catch (err) {
+    console.warn("[ALAE] inclusion audit omitido:", err);
+  }
+
   return chunks.length;
 }

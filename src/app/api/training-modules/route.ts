@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { assertAdminSession } from "@/lib/auth/roles";
+import { assertAdminSession, isAdmin } from "@/lib/auth/roles";
+import { getLatestInclusionScores } from "@/lib/alae/inclusion-scorer";
 import { db } from "@/lib/db";
 import { getOrganizationModules } from "@/lib/training/modules";
 
@@ -29,7 +30,20 @@ export async function GET() {
 
     const modules = await getOrganizationModules(organizationId, userId);
 
-    return NextResponse.json({ modules });
+    let enriched = modules;
+    if (isAdmin(session?.user?.role)) {
+      const scores = await getLatestInclusionScores(
+        organizationId,
+        "MODULE",
+        modules.map((m) => m.id)
+      );
+      enriched = modules.map((m) => ({
+        ...m,
+        inclusionScore: scores.get(m.id)?.score ?? null,
+      }));
+    }
+
+    return NextResponse.json({ modules: enriched });
   } catch (error) {
     console.error("[training-modules GET]", error);
     return NextResponse.json(

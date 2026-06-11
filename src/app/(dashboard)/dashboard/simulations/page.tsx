@@ -1,12 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Brain, Gamepad2, Loader2, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProgressBar } from "@/components/ui/progress-bar";
+import { FeedbackBanner } from "@/components/shared/feedback-banner";
 import { cn } from "@/lib/utils";
 
 type Simulation = {
@@ -15,27 +17,44 @@ type Simulation = {
   scenario: string;
   options: { id: string; label: string; text: string; score: number }[];
   aiAnalysis: string;
+  moduleTitle: string | null;
+  moduleSlug: string | null;
+  current: number;
+  total: number;
 };
 
 export default function SimulationsPage() {
   const [simulation, setSimulation] = useState<Simulation | null>(null);
+  const [index, setIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [finished, setFinished] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
-      const res = await fetch("/api/simulations");
+      const res = await fetch(`/api/simulations?index=${index}`);
       const data = await res.json();
-      if (res.ok && data.simulation) setSimulation(data.simulation);
+      if (!res.ok) {
+        setError(data.error ?? "No se pudo cargar");
+        setSimulation(null);
+        return;
+      }
+      setSimulation(data.simulation ?? null);
+      setSelected(null);
+      setFinished(false);
+      setSubmitError(null);
     } catch {
+      setError("Error de conexión");
       setSimulation(null);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [index]);
 
   useEffect(() => {
     load();
@@ -47,17 +66,23 @@ export default function SimulationsPage() {
   async function handleFinish() {
     if (!simulation || !selected) return;
     setSubmitting(true);
+    setSubmitError(null);
     try {
-      await fetch(`/api/simulations/${simulation.id}/attempt`, {
+      const res = await fetch(`/api/simulations/${simulation.id}/attempt`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ selectedId: selected }),
       });
+      const data = await res.json();
+      if (!res.ok) {
+        setSubmitError(data.error ?? "No se pudo guardar el intento");
+        return;
+      }
+      setFinished(true);
     } catch {
-      /* resultado local igualmente */
+      setSubmitError("Error de conexión al guardar");
     } finally {
       setSubmitting(false);
-      setFinished(true);
     }
   }
 
@@ -70,11 +95,28 @@ export default function SimulationsPage() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="mx-auto max-w-lg space-y-4 py-12">
+        <FeedbackBanner variant="error" message={error} />
+        <Button onClick={() => load()}>Reintentar</Button>
+      </div>
+    );
+  }
+
   if (!simulation) {
     return (
-      <p className="text-sm text-brand-muted-gray">
-        No hay simulaciones disponibles.
-      </p>
+      <div className="mx-auto max-w-lg text-center space-y-4 py-12">
+        <Gamepad2 className="mx-auto h-12 w-12 text-brand-muted-gray/40" />
+        <h1 className="font-heading text-2xl font-bold">Simulaciones</h1>
+        <p className="text-brand-muted-gray">
+          Aún no hay simulaciones. Sube un PDF en Documentos y genera contenido
+          con IA para crear casos prácticos.
+        </p>
+        <Button asChild>
+          <Link href="/dashboard/documents">Ir a documentos</Link>
+        </Button>
+      </div>
     );
   }
 
@@ -86,6 +128,12 @@ export default function SimulationsPage() {
         <p className="mt-1 text-brand-muted-gray">
           Toma decisiones reales y recibe feedback
         </p>
+        {simulation.total > 1 && (
+          <p className="mt-2 text-sm text-brand-muted-gray">
+            Caso {simulation.current} de {simulation.total}
+            {simulation.moduleTitle && ` · ${simulation.moduleTitle}`}
+          </p>
+        )}
       </div>
 
       <Card className="border-brand-cobalt/10">
@@ -122,6 +170,10 @@ export default function SimulationsPage() {
               ))}
             </div>
           ) : null}
+
+          {submitError && (
+            <FeedbackBanner variant="error" message={submitError} />
+          )}
 
           {!finished && selected && (
             <Button
@@ -176,17 +228,34 @@ export default function SimulationsPage() {
                   </CardContent>
                 </Card>
 
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => {
-                    setSelected(null);
-                    setFinished(false);
-                    load();
-                  }}
-                >
-                  Intentar de nuevo
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  {simulation.current < simulation.total && (
+                    <Button
+                      className="flex-1"
+                      onClick={() => setIndex((i) => i + 1)}
+                    >
+                      Siguiente simulación
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      setSelected(null);
+                      setFinished(false);
+                      setSubmitError(null);
+                    }}
+                  >
+                    Intentar de nuevo
+                  </Button>
+                  {simulation.moduleSlug && (
+                    <Button variant="outline" className="flex-1" asChild>
+                      <Link href={`/dashboard/modules/${simulation.moduleSlug}`}>
+                        Ver módulo
+                      </Link>
+                    </Button>
+                  )}
+                </div>
               </motion.div>
             )}
           </AnimatePresence>

@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { submitActivityAttempt } from "@/lib/activities/quiz";
 import { getActivityExplanation } from "@/lib/activities/types";
+import {
+  recordModalityUse,
+  syncSupportLevelFromActivity,
+} from "@/lib/alae/learning-profile";
 import { logLearningEvent } from "@/lib/learning/events";
 
 export async function POST(
@@ -34,12 +38,16 @@ export async function POST(
       timeSecs: body.timeSecs,
     });
 
-    await logLearningEvent({
-      organizationId,
-      userId,
-      eventType: passed ? "ACTIVITY_PASSED" : "ACTIVITY_FAILED",
-      payload: { activityId: id, score, moduleId: activity.moduleId },
-    });
+    await Promise.all([
+      logLearningEvent({
+        organizationId,
+        userId,
+        eventType: passed ? "ACTIVITY_PASSED" : "ACTIVITY_FAILED",
+        payload: { activityId: id, score, moduleId: activity.moduleId },
+      }),
+      recordModalityUse(userId, organizationId, "PRACTICE"),
+      syncSupportLevelFromActivity(userId, organizationId),
+    ]);
 
     return NextResponse.json({
       score,

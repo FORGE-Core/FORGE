@@ -67,6 +67,27 @@ enum AutomationTrigger {
   CUSTOM_WEBHOOK
 }
 
+enum LearningModality {
+  READING
+  LISTENING
+  VISUAL
+  PRACTICE
+  MIXED
+}
+
+enum LearningPace {
+  SLOW
+  NORMAL
+  FAST
+}
+
+enum SupportLevel {
+  STANDARD
+  GUIDED
+  SIMPLIFIED
+  INTENSIVE
+}
+
 // ─── Multi-tenant core ───────────────────────────────────────────────────────
 
 model Organization {
@@ -85,7 +106,8 @@ model Organization {
   processes     Process[]
   conversations Conversation[]
   automations   Automation[]
-  reports       ReportSnapshot[]
+  reports         ReportSnapshot[]
+  inclusionAudits InclusionAudit[]
 
   @@index([slug])
   @@map("organizations")
@@ -109,8 +131,13 @@ model User {
   sessions       Session[]
   progress       UserProgress[]
   activityAttempts ActivityAttempt[]
-  conversations  Conversation[]
-  learningEvents LearningEvent[]
+  conversations         Conversation[]
+  learningEvents        LearningEvent[]
+  accessibilityProfile  AccessibilityProfile?
+  learningProfile       LearningProfile?
+  accessibilityEvents   AccessibilityEvent[]
+  contentAdaptations    ContentAdaptation[]
+  pushSubscriptions     PushSubscription[]
 
   @@index([organizationId])
   @@index([organizationId, role])
@@ -386,4 +413,121 @@ model Automation {
 
   @@index([organizationId])
   @@map("automations")
+}
+
+// ─── ALAE: Accesibilidad e inclusión ─────────────────────────────────────────
+
+model AccessibilityProfile {
+  id               String           @id @default(cuid())
+  organizationId   String
+  userId           String           @unique
+  fontScale        Float            @default(1)
+  highContrast     Boolean          @default(false)
+  darkMode         Boolean          @default(false)
+  reduceMotion     Boolean          @default(false)
+  preferredModality LearningModality @default(MIXED)
+  simplifiedLanguage Boolean          @default(false)
+  stepByStepMode   Boolean          @default(false)
+  autoReadAloud    Boolean          @default(false)
+  captionsEnabled  Boolean          @default(true)
+  learningPace     LearningPace     @default(NORMAL)
+  wizardCompleted       Boolean          @default(false)
+  voiceCommandsEnabled  Boolean          @default(false)
+  voiceInputEnabled     Boolean          @default(false)
+  declaredNeeds         Json             @default("{}")
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@map("accessibility_profiles")
+}
+
+model LearningProfile {
+  id              String        @id @default(cuid())
+  organizationId  String
+  userId          String        @unique
+  modalityScores  Json          @default("{}")
+  supportLevel    SupportLevel  @default(STANDARD)
+  readingCount    Int           @default(0)
+  listeningCount  Int           @default(0)
+  visualCount     Int           @default(0)
+  practiceCount   Int           @default(0)
+  lastAdaptedAt   DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@map("learning_profiles")
+}
+
+model InclusionAudit {
+  id              String   @id @default(cuid())
+  organizationId  String
+  targetType      String
+  targetId        String
+  overallScore    Float
+  dimensions      Json     @default("{}")
+  issues          Json     @default("[]")
+  recommendations Json     @default("[]")
+  aiGenerated     Boolean  @default(true)
+  auditedAt       DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, targetType, targetId])
+  @@index([organizationId, overallScore])
+  @@map("inclusion_audits")
+}
+
+model AccessibilityEvent {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String
+  eventType      String
+  payload        Json     @default("{}")
+  createdAt      DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, eventType])
+  @@index([userId, createdAt])
+  @@map("accessibility_events")
+}
+
+model ContentAdaptation {
+  id              String   @id @default(cuid())
+  organizationId  String
+  userId          String?
+  sourceType      String
+  sourceId        String
+  adaptationType  String
+  outputContent   Json
+  createdAt       DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, sourceType, sourceId])
+  @@index([userId])
+  @@map("content_adaptations")
+}
+
+model PushSubscription {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String
+  endpoint       String
+  p256dh         String
+  auth           String
+  userAgent      String?
+  createdAt      DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, endpoint])
+  @@index([organizationId])
+  @@map("push_subscriptions")
 }

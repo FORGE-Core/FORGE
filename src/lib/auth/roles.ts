@@ -9,6 +9,7 @@ export function isSupervisor(role: UserRole | undefined): boolean {
   return role === "SUPERVISOR";
 }
 
+/** Reportes, equipo y detalle de miembros (admin + supervisor). */
 export function canViewReports(role: UserRole | undefined): boolean {
   return isAdmin(role) || isSupervisor(role);
 }

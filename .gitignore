@@ -44,3 +44,5 @@ next-env.d.ts
 
 # uploads locales por organización
 /storage/
+.playwright-browsers/
+**/.playwright-browsers/

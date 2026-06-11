@@ -2,10 +2,11 @@
 
 import { motion } from "framer-motion";
 import {
-  Bot,
   FileText,
   History,
   Link2,
+  Mic,
+  MicOff,
   Plus,
   Send,
   ShieldCheck,
@@ -13,6 +14,10 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { AlaeAdaptButtons } from "@/components/alae/alae-adapt-buttons";
+import { NovaAvatar2D } from "@/components/alae/nova-avatar-2d";
+import { useAccessibility } from "@/components/alae/accessibility-provider";
+import { useVoiceInput } from "@/hooks/use-voice-input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -36,6 +41,7 @@ type ConversationPreview = {
 };
 
 export function AIChat() {
+  const { speakAloud, voiceInputEnabled, isSpeaking } = useAccessibility();
   const searchParams = useSearchParams();
   const initialPrompt = searchParams.get("prompt");
   const promptedRef = useRef(false);
@@ -60,6 +66,7 @@ export function AIChat() {
   );
   const [history, setHistory] = useState<ConversationPreview[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+  const sendMessageRef = useRef<(text: string) => void>(() => {});
 
   const loadHistory = useCallback(async () => {
     try {
@@ -173,6 +180,8 @@ export function AIChat() {
               : msg
           )
         );
+      } else {
+        speakAloud(fullAnswer);
       }
     } catch (err) {
       const text =
@@ -187,7 +196,23 @@ export function AIChat() {
     } finally {
       setLoading(false);
     }
-  }, [conversationId, loading, loadHistory]);
+  }, [conversationId, loading, loadHistory, speakAloud]);
+
+  sendMessageRef.current = (text: string) => {
+    void sendMessage(text);
+  };
+
+  const { listening, interim, supported, toggle } = useVoiceInput((text) => {
+    sendMessageRef.current(text);
+  });
+
+  const avatarState = loading
+    ? "thinking"
+    : listening
+      ? "listening"
+      : isSpeaking
+        ? "speaking"
+        : "idle";
 
   const loadConversation = useCallback(async (id: string) => {
     try {
@@ -247,18 +272,22 @@ export function AIChat() {
     low: "Sin fuentes en documentos — respuesta general",
   };
 
+  const lastAssistantMessage = [...messages]
+    .reverse()
+    .find((m) => m.role === "assistant" && m.content.trim().length > 20);
+
   return (
     <div className="grid gap-6 xl:grid-cols-[1fr_300px]">
       <div className="flex h-[calc(100vh-8rem)] flex-col rounded-[24px] border border-black/5 bg-white shadow-sm">
         <div className="flex items-center justify-between gap-3 border-b border-black/5 px-6 py-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl gradient-brand">
-              <Bot className="h-5 w-5 text-white" />
-            </div>
+            <NovaAvatar2D size={40} state={avatarState} />
             <div>
               <h2 className="font-heading font-semibold">NOVA · Mentor IA</h2>
               <p className="text-xs text-brand-muted-gray">
-                Respuestas basadas en tu documentación
+                {voiceInputEnabled
+                  ? "Modo voz activo · documentación empresarial"
+                  : "Respuestas basadas en tu documentación"}
               </p>
             </div>
           </div>
@@ -349,7 +378,7 @@ export function AIChat() {
                 )}
               >
                 {msg.role === "assistant" ? (
-                  <Bot className="h-4 w-4" />
+                  <NovaAvatar2D size={32} state={loading && msg.content === "" ? "thinking" : "idle"} />
                 ) : (
                   <User className="h-4 w-4" />
                 )}
@@ -380,18 +409,51 @@ export function AIChat() {
           )}
         </div>
 
+        {lastAssistantMessage && !loading && (
+          <div className="border-t border-black/5 px-4 py-3">
+            <AlaeAdaptButtons
+              content={lastAssistantMessage.content}
+              sourceType="CHAT"
+              sourceId={lastAssistantMessage.id}
+            />
+          </div>
+        )}
+
         <form
           onSubmit={handleSend}
           className="flex gap-3 border-t border-black/5 p-4"
         >
+          {voiceInputEnabled && supported && (
+            <Button
+              type="button"
+              size="icon"
+              variant={listening ? "default" : "outline"}
+              onClick={toggle}
+              disabled={loading}
+              aria-label={listening ? "Detener micrófono" : "Hablar con NOVA"}
+            >
+              {listening ? (
+                <MicOff className="h-4 w-4" />
+              ) : (
+                <Mic className="h-4 w-4" />
+              )}
+            </Button>
+          )}
           <input
-            value={input}
+            value={listening && interim ? interim : input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Pregunta sobre un proceso..."
+            placeholder={
+              listening
+                ? "Escuchando…"
+                : voiceInputEnabled
+                  ? "Pregunta o usa el micrófono…"
+                  : "Pregunta sobre un proceso..."
+            }
             className="flex-1 rounded-2xl border border-black/10 bg-brand-light-bg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-cobalt/30"
             aria-label="Mensaje para el mentor IA"
+            readOnly={listening}
           />
-          <Button type="submit" size="icon" disabled={loading}>
+          <Button type="submit" size="icon" disabled={loading || listening}>
             <Send className="h-4 w-4" />
           </Button>
         </form>

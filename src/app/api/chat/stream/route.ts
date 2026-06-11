@@ -1,7 +1,12 @@
 import { auth } from "@/auth";
 import { checkApiRateLimit } from "@/lib/api-guard";
+import { getAlaeContextForUser } from "@/lib/alae/accessibility-profile";
 import { enrichRAGSources } from "@/lib/chat/enrich-sources";
 import { db } from "@/lib/db";
+import {
+  recordModalityUse,
+  syncSupportLevelFromActivity,
+} from "@/lib/alae/learning-profile";
 import { logLearningEvent } from "@/lib/learning/events";
 import { prepareRAGContext, streamRAGAnswer } from "@/ai/rag/stream-pipeline";
 
@@ -48,7 +53,10 @@ export async function POST(req: Request) {
     conversationId = conv.id;
   }
 
-  const { sources } = await prepareRAGContext(organizationId, message);
+  const [{ sources }, alaeContext] = await Promise.all([
+    prepareRAGContext(organizationId, message),
+    getAlaeContextForUser(userId, organizationId),
+  ]);
   const enriched = await enrichRAGSources(sources);
 
   const encoder = new TextEncoder();
@@ -73,6 +81,7 @@ export async function POST(req: Request) {
         for await (const chunk of streamRAGAnswer({
           organizationId,
           question: message,
+          alaeContext,
         })) {
           fullAnswer += chunk;
           send("token", { text: chunk });
@@ -90,12 +99,16 @@ export async function POST(req: Request) {
           ],
         });
 
-        await logLearningEvent({
-          organizationId,
-          userId,
-          eventType: "CHAT_QUESTION",
-          payload: { conversationId, sourceCount: enriched.length, stream: true },
-        });
+        await Promise.all([
+          logLearningEvent({
+            organizationId,
+            userId,
+            eventType: "CHAT_QUESTION",
+            payload: { conversationId, sourceCount: enriched.length, stream: true },
+          }),
+          recordModalityUse(userId, organizationId, "READING"),
+          syncSupportLevelFromActivity(userId, organizationId),
+        ]);
 
         send("done", { answer: fullAnswer });
       } catch (err) {

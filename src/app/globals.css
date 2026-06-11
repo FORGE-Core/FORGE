@@ -27,6 +27,45 @@
 
   body {
     @apply bg-brand-light-bg font-body text-brand-text-dark;
+    font-size: calc(1rem * var(--alae-font-scale, 1));
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-brand-cobalt);
+    outline-offset: 2px;
+  }
+
+  html[data-alae-high-contrast="true"] body {
+    @apply bg-white text-black;
+  }
+
+  html[data-alae-high-contrast="true"] .glass-light {
+    @apply border-black/30 bg-white;
+  }
+
+  html[data-alae-dark="true"] {
+    --color-brand-lavender: #a259ff;
+    --color-brand-cobalt: #8e54e9;
+    --color-brand-dark-bg: #0e0e0e;
+    --color-brand-light-bg: #0e0e0e;
+    --color-brand-champagne: #1a1524;
+    --color-brand-text-dark: #ffffff;
+    --color-brand-muted-gray: #8b8b9a;
+
+    color-scheme: dark;
+  }
+
+  html[data-alae-dark="true"] body {
+    @apply bg-brand-dark-bg text-brand-text-light;
+  }
+
+  html[data-alae-reduce-motion="true"] *,
+  html[data-alae-reduce-motion="true"] *::before,
+  html[data-alae-reduce-motion="true"] *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 
   h1,
@@ -63,5 +102,42 @@
       var(--color-brand-lavender),
       var(--color-brand-cobalt)
     );
+  }
+
+  html[data-alae-dark="true"] .glass-light {
+    border-color: rgb(255 255 255 / 0.08);
+    background-color: rgb(22 22 24 / 0.9);
+  }
+
+  html[data-alae-dark="true"] .bg-white {
+    background-color: #161618;
+  }
+
+  html[data-alae-dark="true"] .bg-white\/80 {
+    background-color: rgb(22 22 24 / 0.8);
+  }
+
+  html[data-alae-dark="true"] .bg-white\/70 {
+    background-color: rgb(22 22 24 / 0.7);
+  }
+
+  html[data-alae-dark="true"] .border-black\/5 {
+    border-color: rgb(255 255 255 / 0.08);
+  }
+
+  html[data-alae-dark="true"] .border-black\/10 {
+    border-color: rgb(255 255 255 / 0.1);
+  }
+
+  html[data-alae-dark="true"] .shadow-sm {
+    --tw-shadow-color: rgb(0 0 0 / 0.35);
+  }
+
+  html[data-alae-dark="true"] .hover\:bg-white:hover {
+    background-color: #222226;
+  }
+
+  html[data-alae-dark="true"] .text-brand-text-dark {
+    color: #ffffff;
   }
 }

@@ -2,8 +2,11 @@
 
 import { use, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { ArrowLeft, Loader2 } from "lucide-react";
+import { FeedbackBanner } from "@/components/shared/feedback-banner";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import type { ModuleCardData } from "@/components/modules/module-card";
@@ -29,15 +32,25 @@ type MemberDetail = {
   chatQuestions: number;
 };
 
+const ROLES = ["ADMIN", "SUPERVISOR", "EMPLOYEE"] as const;
+const STATUSES = ["ACTIVE", "PENDING", "INACTIVE"] as const;
+
 export default function TeamMemberPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "ADMIN";
+
   const [data, setData] = useState<MemberDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [role, setRole] = useState("");
+  const [status, setStatus] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -49,6 +62,9 @@ export default function TeamMemberPage({
         return;
       }
       setData(json);
+      setRole(json.user.role);
+      setStatus(json.user.status);
+      setError(null);
     } catch {
       setError("Error de conexión");
     } finally {
@@ -59,6 +75,30 @@ export default function TeamMemberPage({
   useEffect(() => {
     load();
   }, [load]);
+
+  async function handleUpdate() {
+    if (!isAdmin || !data) return;
+    setSaving(true);
+    setSaveMessage(null);
+    try {
+      const res = await fetch(`/api/users/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role, status }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setSaveMessage(json.error ?? "No se pudo actualizar");
+        return;
+      }
+      setSaveMessage("Cambios guardados");
+      await load();
+    } catch {
+      setSaveMessage("Error de conexión");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -105,6 +145,55 @@ export default function TeamMemberPage({
         </div>
       </div>
 
+      {isAdmin && data.user.id !== session?.user?.id && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Gestión de acceso</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-wrap items-end gap-4">
+            <label className="space-y-1 text-sm">
+              <span className="text-brand-muted-gray">Rol</span>
+              <select
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                className="block rounded-2xl border border-black/10 bg-brand-light-bg px-4 py-2"
+              >
+                {ROLES.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="space-y-1 text-sm">
+              <span className="text-brand-muted-gray">Estado</span>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                className="block rounded-2xl border border-black/10 bg-brand-light-bg px-4 py-2"
+              >
+                {STATUSES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <Button onClick={handleUpdate} disabled={saving}>
+              {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+              Guardar
+            </Button>
+            {saveMessage && (
+              <FeedbackBanner
+                variant={saveMessage.includes("Error") ? "error" : "success"}
+                message={saveMessage}
+                className="w-full"
+              />
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>Progreso general</CardTitle>
@@ -126,15 +215,19 @@ export default function TeamMemberPage({
           <CardTitle>Módulos</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {data.modules.map((m) => (
-            <div
-              key={m.slug}
-              className="flex items-center justify-between rounded-2xl bg-brand-light-bg px-4 py-3 text-sm"
-            >
-              <span className="font-medium">{m.title}</span>
-              <span>{m.progress}%</span>
-            </div>
-          ))}
+          {data.modules.length === 0 ? (
+            <p className="text-sm text-brand-muted-gray">Sin módulos asignados.</p>
+          ) : (
+            data.modules.map((m) => (
+              <div
+                key={m.slug}
+                className="flex items-center justify-between rounded-2xl bg-brand-light-bg px-4 py-3 text-sm"
+              >
+                <span className="font-medium">{m.title}</span>
+                <span>{m.progress}%</span>
+              </div>
+            ))
+          )}
         </CardContent>
       </Card>
 

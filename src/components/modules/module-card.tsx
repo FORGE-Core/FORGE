@@ -1,6 +1,3 @@
-"use client";
-
-import { motion } from "framer-motion";
 import { Clock, Play } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -16,9 +13,16 @@ export interface ModuleCardData {
   status: "pending" | "in_progress" | "completed";
   progress: number;
   gradient: string;
+  inclusionScore?: number | null;
 }
 
-export function ModuleCard({ module, index = 0 }: { module: ModuleCardData; index?: number }) {
+export function ModuleCard({
+  module,
+  index = 0,
+}: {
+  module: ModuleCardData;
+  index?: number;
+}) {
   const statusLabel =
     module.status === "completed"
       ? "Completado"
@@ -27,65 +31,52 @@ export function ModuleCard({ module, index = 0 }: { module: ModuleCardData; inde
         : "Pendiente";
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.06 }}
+    <div
+      className="animate-in fade-in slide-in-from-bottom-3 duration-300 fill-mode-both"
+      style={{ animationDelay: `${index * 60}ms` }}
     >
-      <Link href={`/dashboard/modules/${module.slug}`}>
-        <article className="group overflow-hidden rounded-[24px] border border-black/5 bg-white shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg">
-          <div
-            className={cn(
-              "relative flex h-36 items-end bg-gradient-to-br p-5",
-              module.gradient
-            )}
-          >
-            <div className="absolute inset-0 bg-black/10 opacity-0 transition-opacity group-hover:opacity-100" />
-            <div className="relative z-10 flex w-full items-end justify-between">
-              <Badge className="bg-white/20 text-white backdrop-blur-sm">
-                {module.category}
-              </Badge>
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 opacity-0 backdrop-blur transition-opacity group-hover:opacity-100">
-                <Play className="h-5 w-5 fill-white text-white" />
-              </div>
-            </div>
+      <Link
+        href={`/dashboard/modules/${module.slug}`}
+        className="group block overflow-hidden rounded-[24px] border border-black/5 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg"
+      >
+        <div
+          className={cn(
+            "relative flex h-36 items-end bg-gradient-to-br p-5",
+            module.gradient
+          )}
+        >
+          <Badge className="absolute right-4 top-4 border-white/20 bg-white/15 text-white backdrop-blur-sm">
+            {statusLabel}
+          </Badge>
+          <div className="text-white">
+            <p className="text-xs font-medium uppercase tracking-wide text-white/70">
+              {module.category}
+            </p>
+            <h3 className="font-heading text-lg font-bold leading-tight">
+              {module.title}
+            </h3>
           </div>
-          <div className="space-y-3 p-5">
-            <div className="flex items-start justify-between gap-2">
-              <h3 className="font-heading font-semibold leading-tight group-hover:text-brand-cobalt">
-                {module.title}
-              </h3>
-              <Badge
-                variant={
-                  module.status === "completed"
-                    ? "success"
-                    : module.status === "pending"
-                      ? "warning"
-                      : "default"
-                }
-              >
-                {statusLabel}
-              </Badge>
-            </div>
-            <div className="flex flex-wrap gap-3 text-xs text-brand-muted-gray">
-              <span>{module.level}</span>
-              <span className="flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                {module.duration}
-              </span>
-            </div>
-            {module.progress > 0 && (
-              <div>
-                <div className="mb-1 flex justify-between text-xs">
-                  <span className="text-brand-muted-gray">Progreso</span>
-                  <span className="font-medium">{module.progress}%</span>
-                </div>
-                <ProgressBar value={module.progress} size="sm" />
-              </div>
-            )}
+        </div>
+        <div className="space-y-3 p-5">
+          <div className="flex items-center justify-between text-xs text-brand-muted-gray">
+            <span className="flex items-center gap-1">
+              <Clock className="h-3.5 w-3.5" />
+              {module.duration}
+            </span>
+            <span>{module.level}</span>
           </div>
-        </article>
+          <ProgressBar value={module.progress} />
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-semibold text-brand-cobalt">
+              {module.progress}%
+            </span>
+            <span className="flex items-center gap-1 text-xs font-medium text-brand-muted-gray transition-colors group-hover:text-brand-cobalt">
+              <Play className="h-3.5 w-3.5" />
+              Continuar
+            </span>
+          </div>
+        </div>
       </Link>
-    </motion.div>
+    </div>
   );
 }

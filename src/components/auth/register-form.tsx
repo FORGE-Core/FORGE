@@ -6,7 +6,13 @@ import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { registerAction } from "@/server/actions/auth";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 export function RegisterForm() {
   const router = useRouter();
@@ -41,14 +47,16 @@ export function RegisterForm() {
       return;
     }
 
-    router.push("/dashboard");
+    router.push("/dashboard/onboarding");
     router.refresh();
   }
 
   return (
     <Card className="w-full max-w-md">
       <CardHeader className="text-center">
-        <CardTitle className="font-heading text-2xl">Crea tu empresa</CardTitle>
+        <CardTitle className="font-heading text-2xl">
+          Crea tu empresa en <span className="text-gradient">FORGE</span>
+        </CardTitle>
         <CardDescription>
           Registra tu organización y comienza a capacitar a tu equipo
         </CardDescription>
@@ -56,33 +64,57 @@ export function RegisterForm() {
       <CardContent className="space-y-3">
         <form className="space-y-3" onSubmit={onSubmit}>
           {error && (
-            <p className="rounded-2xl bg-red-50 px-4 py-2 text-sm text-red-700">
+            <p
+              role="alert"
+              className="rounded-2xl bg-red-50 px-4 py-2 text-sm text-red-700"
+            >
               {error}
             </p>
           )}
-          <input
-            name="companyName"
-            required
-            placeholder="Nombre de la empresa"
-            className="w-full rounded-2xl border border-black/10 bg-brand-light-bg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-cobalt/30"
-          />
-          <input
-            name="email"
-            type="email"
-            required
-            autoComplete="email"
-            placeholder="Tu correo corporativo"
-            className="w-full rounded-2xl border border-black/10 bg-brand-light-bg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-cobalt/30"
-          />
-          <input
-            name="password"
-            type="password"
-            required
-            minLength={6}
-            autoComplete="new-password"
-            placeholder="Contraseña (mín. 6 caracteres)"
-            className="w-full rounded-2xl border border-black/10 bg-brand-light-bg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-cobalt/30"
-          />
+          <div>
+            <label htmlFor="companyName" className="sr-only">
+              Nombre de la empresa
+            </label>
+            <input
+              id="companyName"
+              name="companyName"
+              required
+              placeholder="Nombre de la empresa"
+              aria-label="Nombre de la empresa"
+              className="w-full rounded-2xl border border-black/10 bg-brand-light-bg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-cobalt/30"
+            />
+          </div>
+          <div>
+            <label htmlFor="register-email" className="sr-only">
+              Correo electrónico
+            </label>
+            <input
+              id="register-email"
+              name="email"
+              type="email"
+              required
+              autoComplete="email"
+              placeholder="Tu correo corporativo"
+              aria-label="Correo electrónico"
+              className="w-full rounded-2xl border border-black/10 bg-brand-light-bg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-cobalt/30"
+            />
+          </div>
+          <div>
+            <label htmlFor="register-password" className="sr-only">
+              Contraseña
+            </label>
+            <input
+              id="register-password"
+              name="password"
+              type="password"
+              required
+              minLength={6}
+              autoComplete="new-password"
+              placeholder="Contraseña (mín. 6 caracteres)"
+              aria-label="Contraseña"
+              className="w-full rounded-2xl border border-black/10 bg-brand-light-bg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-cobalt/30"
+            />
+          </div>
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Creando cuenta…" : "Crear cuenta"}
           </Button>

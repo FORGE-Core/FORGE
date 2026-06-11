@@ -102,6 +102,12 @@ export async function PATCH(req: Request) {
         ...body.notifications,
       };
     }
+    if (body.alae) {
+      nextSettings.alae = {
+        ...(currentSettings.alae as object),
+        ...body.alae,
+      };
+    }
 
     const updated = await db.organization.update({
       where: { id: organizationId },

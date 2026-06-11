@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { assertAdminSession, canManageDocuments } from "@/lib/auth/roles";
 import { db } from "@/lib/db";
+import { getLatestInclusionScores } from "@/lib/alae/inclusion-scorer";
 import { getOrganizationModuleBySlug } from "@/lib/training/modules";
 import { getModuleVideo } from "@/services/documents/upload-module-video";
 
@@ -17,7 +18,7 @@ export async function GET(
 
     if (!organizationId) {
       return NextResponse.json(
-        { error: "Debes iniciar sesión" },
+        { error: "Debes iniciar sesi?n" },
         { status: 401 }
       );
     }
@@ -30,13 +31,20 @@ export async function GET(
 
     if (!result) {
       return NextResponse.json(
-        { error: "Módulo no encontrado" },
+        { error: "M?dulo no encontrado" },
         { status: 404 }
       );
     }
 
     const video = await getModuleVideo(organizationId, result.module.id);
     const canManage = canManageDocuments(session?.user?.role);
+
+    const inclusionScores = await getLatestInclusionScores(
+      organizationId,
+      "MODULE",
+      [result.module.id]
+    );
+    const inclusion = inclusionScores.get(result.module.id);
 
     const [processes, moduleDocuments] = await Promise.all([
       db.process.findMany({
@@ -60,7 +68,7 @@ export async function GET(
       return raw.map((s, i) => ({
         id: `${p.id}-${i}`,
         title: typeof s === "object" && s && "title" in s ? String((s as { title: string }).title) : `Paso ${i + 1}`,
-        duration: "—",
+        duration: "?",
         completed: false,
       }));
     });
@@ -69,10 +77,10 @@ export async function GET(
       steps.length > 0
         ? steps
         : [
-            { id: "intro", title: "Introducción al módulo", duration: "10 min", completed: false },
+            { id: "intro", title: "Introducci?n al m?dulo", duration: "10 min", completed: false },
             {
               id: "practice",
-              title: "Práctica y evaluación",
+              title: "Pr?ctica y evaluaci?n",
               duration: result.module.estimatedMins
                 ? `${result.module.estimatedMins} min`
                 : "15 min",
@@ -102,12 +110,15 @@ export async function GET(
         lessons,
         resources,
         processes: processes.map((p) => p.title),
+        inclusionScore: inclusion?.score ?? null,
+        inclusionIssues: inclusion?.issues ?? [],
+        inclusionRecommendations: inclusion?.recommendations ?? [],
       },
     });
   } catch (error) {
     console.error("[training-modules slug GET]", error);
     return NextResponse.json(
-      { error: "No se pudo cargar el módulo" },
+      { error: "No se pudo cargar el m?dulo" },
       { status: 500 }
     );
   }
@@ -136,7 +147,7 @@ export async function PATCH(
 
     if (!existing) {
       return NextResponse.json(
-        { error: "Módulo no encontrado" },
+        { error: "M?dulo no encontrado" },
         { status: 404 }
       );
     }
@@ -158,7 +169,7 @@ export async function PATCH(
   } catch (error) {
     console.error("[training-modules slug PATCH]", error);
     return NextResponse.json(
-      { error: "No se pudo actualizar el módulo" },
+      { error: "No se pudo actualizar el m?dulo" },
       { status: 500 }
     );
   }
@@ -186,7 +197,7 @@ export async function DELETE(
 
     if (!existing) {
       return NextResponse.json(
-        { error: "Módulo no encontrado" },
+        { error: "M?dulo no encontrado" },
         { status: 404 }
       );
     }
@@ -197,7 +208,7 @@ export async function DELETE(
   } catch (error) {
     console.error("[training-modules slug DELETE]", error);
     return NextResponse.json(
-      { error: "No se pudo eliminar el módulo" },
+      { error: "No se pudo eliminar el m?dulo" },
       { status: 500 }
     );
   }

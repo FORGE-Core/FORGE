@@ -1,6 +1,3 @@
-"use client";
-
-import { motion } from "framer-motion";
 import { Brain, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -9,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 export function AIRecommendations({
   items,
 }: {
-  items: { topic: string; reason: string; slug?: string }[];
+  items: { topic: string; reason: string; slug?: string; href?: string }[];
 }) {
   if (items.length === 0) return null;
 
@@ -29,24 +26,23 @@ export function AIRecommendations({
         </p>
         <ul className="space-y-3">
           {items.map((rec, i) => (
-            <motion.li
+            <li
               key={rec.topic}
-              initial={{ opacity: 0, x: -8 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.08 }}
-              className="rounded-2xl border border-black/5 bg-white px-4 py-3"
+              className="rounded-2xl border border-black/5 bg-white px-4 py-3 animate-in fade-in slide-in-from-left-2 duration-300 fill-mode-both"
+              style={{ animationDelay: `${i * 80}ms` }}
             >
-              <p className="font-medium text-sm">{rec.topic}</p>
+              <p className="text-sm font-medium">{rec.topic}</p>
               <p className="mt-1 text-xs text-brand-muted-gray">{rec.reason}</p>
-            </motion.li>
+            </li>
           ))}
         </ul>
         <Button className="w-full" asChild>
           <Link
             href={
-              items[0]?.slug
+              items[0]?.href ??
+              (items[0]?.slug
                 ? `/dashboard/modules/${items[0].slug}`
-                : "/dashboard/modules"
+                : "/dashboard/modules")
             }
           >
             Reforzar conocimientos

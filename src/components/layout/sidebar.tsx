@@ -1,8 +1,10 @@
 "use client";
 
-import { motion } from "framer-motion";
 import {
   BarChart3,
+  Brain,
+  HeartHandshake,
+  Hand,
   BookOpen,
   Bot,
   FileText,
@@ -26,74 +28,176 @@ const navItems = [
   { href: "/dashboard/simulations", label: "Simulaciones", icon: Gamepad2 },
   { href: "/dashboard/chat", label: "Mentor IA", icon: Bot },
   { href: "/dashboard/documents", label: "Documentos", icon: FileText },
-  { href: "/dashboard/reports", label: "Reportes", icon: BarChart3 },
+  {
+    href: "/dashboard/reports",
+    label: "Reportes",
+    icon: BarChart3,
+    roles: ["ADMIN", "SUPERVISOR"] as const,
+  },
+  {
+    href: "/dashboard/reports/inclusion",
+    label: "Inclusión",
+    icon: HeartHandshake,
+    roles: ["ADMIN", "SUPERVISOR"] as const,
+  },
+  {
+    href: "/dashboard/reports/learning-patterns",
+    label: "Patrones",
+    icon: Brain,
+    roles: ["ADMIN", "SUPERVISOR"] as const,
+  },
   {
     href: "/dashboard/team",
     label: "Equipo",
     icon: Users,
     roles: ["ADMIN", "SUPERVISOR"] as const,
   },
+  { href: "/dashboard/accessibility", label: "Accesibilidad", icon: Hand },
   { href: "/dashboard/profile", label: "Mi perfil", icon: User },
   { href: "/dashboard/settings", label: "Ajustes", icon: Settings },
 ];
+
+function userInitials(name?: string | null, email?: string | null) {
+  if (name?.trim()) {
+    const parts = name.trim().split(/\s+/);
+    return (parts[0][0] + (parts[1]?.[0] ?? "")).toUpperCase();
+  }
+  return (email?.[0] ?? "U").toUpperCase();
+}
 
 export function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
 
+  const visibleItems = navItems.filter((item) => {
+    if ("roles" in item && item.roles) {
+      const userRole = session?.user?.role;
+      return userRole && item.roles.includes(userRole as "ADMIN" | "SUPERVISOR");
+    }
+    return true;
+  });
+
   return (
-    <aside className="flex h-screen w-64 flex-col border-r border-white/10 bg-brand-dark-bg p-4 text-brand-text-light">
-      <Link href="/dashboard" className="mb-8 px-3 font-heading text-xl font-bold">
-        <span className="text-brand-lavender">FORGE</span>
+    <aside
+      className={cn(
+        "group/sidebar relative z-40 m-3 flex h-[calc(100vh-1.5rem)] w-[4.25rem] shrink-0 flex-col",
+        "rounded-[28px] bg-[#141414] py-4 text-brand-text-light",
+        "shadow-[0_8px_40px_rgba(0,0,0,0.18)]",
+        "transition-[width] duration-300 ease-out hover:w-60"
+      )}
+      aria-label="Menú lateral"
+    >
+      {/* Logo */}
+      <Link
+        href="/dashboard"
+        className="mb-5 flex items-center justify-center gap-3 px-2 transition-all duration-300 group-hover/sidebar:justify-start group-hover/sidebar:px-4"
+      >
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl gradient-brand font-heading text-sm font-bold text-white">
+          F
+        </div>
+        <span
+          className={cn(
+            "max-w-0 overflow-hidden whitespace-nowrap font-heading text-lg font-bold opacity-0",
+            "transition-[max-width,opacity] duration-300 ease-out",
+            "group-hover/sidebar:max-w-[140px] group-hover/sidebar:opacity-100"
+          )}
+        >
+          <span className="text-brand-lavender">FORGE</span>
+        </span>
       </Link>
-      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto">
-        {navItems.map((item) => {
-          if ("roles" in item && item.roles) {
-            const userRole = session?.user?.role;
-            if (!userRole || !item.roles.includes(userRole as "ADMIN" | "SUPERVISOR")) {
-              return null;
-            }
-          }
+
+      <nav
+        className="flex flex-1 flex-col gap-1 overflow-x-hidden overflow-y-auto px-2"
+        aria-label="Navegación principal"
+      >
+        {visibleItems.map((item) => {
           const active = item.exact
             ? pathname === item.href
             : pathname === item.href || pathname.startsWith(item.href + "/");
           const Icon = item.icon;
+
           return (
-            <Link key={item.href} href={item.href}>
-              <motion.div
-                whileHover={{ x: 4 }}
+            <Link
+              key={item.href}
+              href={item.href}
+              title={item.label}
+              className="block"
+            >
+              <div
                 className={cn(
-                  "flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm transition-colors",
+                  "flex items-center rounded-2xl py-2.5 transition-all duration-200",
+                  "justify-center group-hover/sidebar:justify-start group-hover/sidebar:px-3",
+                  "hover:translate-x-1",
                   active
-                    ? "bg-white/10 text-white"
-                    : "text-white/60 hover:bg-white/5 hover:text-white"
+                    ? "bg-white/12 text-white"
+                    : "text-white/55 hover:bg-white/8 hover:text-white"
                 )}
               >
-                <Icon className="h-4 w-4 shrink-0" />
-                {item.label}
-              </motion.div>
+                <Icon className="h-[1.15rem] w-[1.15rem] shrink-0" strokeWidth={1.75} />
+                <span
+                  className={cn(
+                    "max-w-0 overflow-hidden whitespace-nowrap text-sm font-medium opacity-0",
+                    "transition-[max-width,opacity,margin] duration-300 ease-out",
+                    "group-hover/sidebar:ml-3 group-hover/sidebar:max-w-[160px] group-hover/sidebar:opacity-100"
+                  )}
+                >
+                  {item.label}
+                </span>
+              </div>
             </Link>
           );
         })}
       </nav>
-      <div className="mt-4 space-y-2 border-t border-white/10 pt-4">
-        {session?.user?.email && (
-          <p className="truncate px-3 text-xs text-white/45" title={session.user.email}>
-            {session.user.name ?? session.user.email}
-          </p>
+
+      {/* Footer */}
+      <div className="mt-2 space-y-1 border-t border-white/8 px-2 pt-3">
+        {session?.user && (
+          <div
+            className={cn(
+              "flex items-center rounded-2xl py-2 transition-all duration-300",
+              "justify-center group-hover/sidebar:justify-start group-hover/sidebar:px-3"
+            )}
+            title={session.user.email ?? undefined}
+          >
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/12 text-xs font-semibold text-white/90">
+              {userInitials(session.user.name, session.user.email)}
+            </div>
+            <div
+              className={cn(
+                "max-w-0 overflow-hidden opacity-0",
+                "transition-[max-width,opacity,margin] duration-300 ease-out",
+                "group-hover/sidebar:ml-3 group-hover/sidebar:max-w-[160px] group-hover/sidebar:opacity-100"
+              )}
+            >
+              <p className="truncate text-sm font-medium text-white/90">
+                {session.user.name ?? "Usuario"}
+              </p>
+              <p className="truncate text-xs text-white/45">{session.user.email}</p>
+            </div>
+          </div>
         )}
+
         <button
           type="button"
           onClick={() => signOut({ callbackUrl: "/login" })}
-          className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm text-white/60 transition-colors hover:bg-white/5 hover:text-white"
+          className={cn(
+            "flex w-full items-center rounded-2xl py-2.5 text-white/55 transition-all duration-200",
+            "justify-center hover:translate-x-1 hover:bg-white/8 hover:text-white",
+            "group-hover/sidebar:justify-start group-hover/sidebar:px-3"
+          )}
+          title="Cerrar sesión"
         >
-          <LogOut className="h-4 w-4 shrink-0" />
-          Cerrar sesión
+          <LogOut className="h-[1.15rem] w-[1.15rem] shrink-0" strokeWidth={1.75} />
+          <span
+            className={cn(
+              "max-w-0 overflow-hidden whitespace-nowrap text-sm opacity-0",
+              "transition-[max-width,opacity,margin] duration-300 ease-out",
+              "group-hover/sidebar:ml-3 group-hover/sidebar:max-w-[140px] group-hover/sidebar:opacity-100"
+            )}
+          >
+            Cerrar sesión
+          </span>
         </button>
-      </div>
-      <div className="mt-4 rounded-2xl bg-white/5 px-3 py-3 text-xs text-white/50">
-        <p className="font-medium text-white/70">NOVA</p>
-        <p className="mt-1">Asistente IA siempre disponible</p>
       </div>
     </aside>
   );

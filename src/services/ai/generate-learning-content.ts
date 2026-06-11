@@ -333,6 +333,30 @@ export async function generateLearningContentFromDocument({
     },
   });
 
+  try {
+    const mod = await db.trainingModule.findUnique({
+      where: { id: targetModuleId },
+      select: { id: true, title: true, description: true },
+    });
+    if (mod?.description) {
+      const { auditContentInclusion, saveInclusionAudit } = await import(
+        "@/lib/alae/inclusion-scorer"
+      );
+      const result = await auditContentInclusion(
+        `${mod.title}\n\n${mod.description}`,
+        true
+      );
+      await saveInclusionAudit({
+        organizationId,
+        targetType: "MODULE",
+        targetId: mod.id,
+        result,
+      });
+    }
+  } catch (err) {
+    console.warn("[ALAE] auditoría de módulo omitida:", err);
+  }
+
   return {
     moduleId: targetModuleId,
     created,

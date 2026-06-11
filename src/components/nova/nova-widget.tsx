@@ -1,13 +1,17 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Bot, MessageCircle, X } from "lucide-react";
+import { MessageCircle, X } from "lucide-react";
+import { NovaAvatar2D } from "@/components/alae/nova-avatar-2d";
 import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useAccessibility } from "@/components/alae/accessibility-provider";
 
 export function NovaWidget() {
   const [open, setOpen] = useState(false);
+  const { simplifiedLanguage, stepByStepMode, preferredModality, isSpeaking } =
+    useAccessibility();
 
   return (
     <div className="fixed bottom-6 right-6 z-50">
@@ -22,9 +26,10 @@ export function NovaWidget() {
             <div className="gradient-brand px-5 py-4 text-white">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/20">
-                    <Bot className="h-5 w-5" />
-                  </div>
+                  <NovaAvatar2D
+                    size={36}
+                    state={isSpeaking ? "speaking" : "idle"}
+                  />
                   <div>
                     <p className="font-heading font-bold">NOVA</p>
                     <p className="text-xs text-white/80">Tu asistente de aprendizaje</p>
@@ -46,6 +51,18 @@ export function NovaWidget() {
                 Puedo explicarte procesos, resolver dudas y ayudarte a aprender más
                 rápido.
               </p>
+              {(simplifiedLanguage || stepByStepMode) && (
+                <p className="rounded-xl bg-brand-champagne/50 px-3 py-2 text-xs text-brand-muted-gray">
+                  ALAE activo:{" "}
+                  {[
+                    simplifiedLanguage && "lenguaje fácil",
+                    stepByStepMode && "paso a paso",
+                    preferredModality !== "MIXED" && preferredModality.toLowerCase(),
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </p>
+              )}
               <Button className="w-full" asChild>
                 <Link href="/dashboard/chat">
                   <MessageCircle className="h-4 w-4" />
@@ -65,7 +82,7 @@ export function NovaWidget() {
         className="flex h-14 items-center gap-2 rounded-full gradient-brand px-5 text-white shadow-lg shadow-brand-cobalt/30"
         aria-label="Abrir NOVA"
       >
-        <Bot className="h-6 w-6" />
+        <NovaAvatar2D size={32} state={isSpeaking ? "speaking" : "idle"} />
         <span className="font-heading font-semibold">NOVA</span>
       </motion.button>
     </div>

@@ -25,6 +25,7 @@ export function AutomationsManager() {
   const [name, setName] = useState("");
   const [trigger, setTrigger] = useState<string>(TRIGGERS[0]);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -45,6 +46,7 @@ export function AutomationsManager() {
     e.preventDefault();
     if (!name.trim()) return;
     setSaving(true);
+    setError(null);
     try {
       const res = await fetch("/api/automations", {
         method: "POST",
@@ -55,10 +57,15 @@ export function AutomationsManager() {
           config: { webhook: true },
         }),
       });
+      const data = await res.json();
       if (res.ok) {
         setName("");
         load();
+      } else {
+        setError(data.error ?? "No se pudo crear la automatización");
       }
+    } catch {
+      setError("Error de conexión");
     } finally {
       setSaving(false);
     }
@@ -87,6 +94,10 @@ export function AutomationsManager() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        <p className="text-xs text-brand-muted-gray">
+          Las reglas activas disparan webhooks N8N cuando ocurren eventos de
+          aprendizaje (módulo completado, actividad fallida, documento procesado).
+        </p>
         <form onSubmit={handleCreate} className="flex flex-wrap gap-2">
           <input
             placeholder="Nombre de la regla"
@@ -114,6 +125,11 @@ export function AutomationsManager() {
             Agregar
           </Button>
         </form>
+        {error && (
+          <p role="alert" className="text-sm text-red-600">
+            {error}
+          </p>
+        )}
 
         {loading ? (
           <Loader2 className="h-5 w-5 animate-spin text-brand-muted-gray" />

@@ -3,9 +3,9 @@ import { auth } from "@/auth";
 import {
   assertAdminSession,
   canManageDocuments,
-  EMPLOYEE_VISIBLE_DOCUMENT_TYPES,
   isAdmin,
 } from "@/lib/auth/roles";
+import { listOrganizationDocuments } from "@/lib/documents/list";
 import { db } from "@/lib/db";
 import { saveOrganizationFile } from "@/lib/document-storage";
 import { logLearningEvent } from "@/lib/learning/events";
@@ -63,48 +63,15 @@ export async function GET() {
       );
     }
 
-    const admin = isAdmin(role);
-
-    const documents = await db.document.findMany({
-      where: admin
-        ? { organizationId }
-        : {
-            organizationId,
-            type: { in: [...EMPLOYEE_VISIBLE_DOCUMENT_TYPES] },
-            fileUrl: { not: null },
-            status: "READY",
-          },
-      orderBy: { createdAt: "desc" },
-      include: {
-        _count: { select: { chunks: true } },
-      },
-    });
+    const { canManage, documents } = await listOrganizationDocuments(
+      organizationId,
+      role
+    );
 
     return NextResponse.json({
-      canUpload: canManageDocuments(role),
-      canManage: canManageDocuments(role),
-      documents: documents.map((doc) => ({
-        id: doc.id,
-        title: doc.title,
-        type: doc.type,
-        status: doc.status,
-        mimeType: doc.mimeType,
-        fileSize: doc.fileSize,
-        chunkCount: doc._count.chunks,
-        embeddingCount:
-          typeof doc.metadata === "object" &&
-          doc.metadata &&
-          "embeddingCount" in doc.metadata
-            ? Number((doc.metadata as { embeddingCount?: number }).embeddingCount)
-            : 0,
-        contentGenerated:
-          typeof doc.metadata === "object" &&
-          doc.metadata &&
-          "learningContentGeneratedAt" in doc.metadata,
-        createdAt: doc.createdAt,
-        fileUrl: doc.fileUrl,
-        hasFile: !!doc.fileUrl,
-      })),
+      canUpload: canManage,
+      canManage,
+      documents,
     });
   } catch (error) {
     console.error("[documents GET]", error);

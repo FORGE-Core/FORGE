@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { checkApiRateLimit } from "@/lib/api-guard";
 import { queryRAG } from "@/ai/rag/pipeline";
+import { getAlaeContextForUser } from "@/lib/alae/accessibility-profile";
 import { enrichRAGSources } from "@/lib/chat/enrich-sources";
 import { db } from "@/lib/db";
 import { logLearningEvent } from "@/lib/learning/events";
@@ -58,9 +59,11 @@ export async function POST(req: Request) {
       conversationId = conv.id;
     }
 
+    const alaeContext = await getAlaeContextForUser(userId, organizationId);
     const result = await queryRAG({
       organizationId,
       question: message,
+      alaeContext,
     });
 
     const sources = await enrichRAGSources(result.sources);

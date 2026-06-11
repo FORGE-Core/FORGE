@@ -1,10 +1,12 @@
 import { getAIProvider } from "@/ai/providers";
+import { buildNovaSystemAugmentation } from "@/lib/alae/prompts";
+import type { AlaeContext } from "@/lib/alae/types";
 import { db } from "@/lib/db";
 import { getEnv } from "@/lib/env";
 import { chunkText } from "./chunker";
 import { searchSimilarChunks } from "./retriever";
 
-const RAG_SYSTEM_PROMPT = `Eres un mentor de capacitación empresarial de Cappi.
+const RAG_SYSTEM_PROMPT = `Eres NOVA, mentor de capacitación empresarial de FORGE.
 REGLAS ESTRICTAS:
 - Responde ÚNICAMENTE con la información del contexto proporcionado cuando exista.
 - Si no hay contexto de documentos, puedes dar orientación general breve sobre capacitación operativa y sugerir que el admin suba manuales.
@@ -16,6 +18,7 @@ export interface RAGQueryInput {
   organizationId: string;
   question: string;
   topK?: number;
+  alaeContext?: AlaeContext | null;
 }
 
 export interface RAGResponse {
@@ -27,6 +30,7 @@ export async function queryRAG({
   organizationId,
   question,
   topK = 5,
+  alaeContext,
 }: RAGQueryInput): Promise<RAGResponse> {
   const provider = getAIProvider();
   let sources: RAGResponse["sources"] = [];
@@ -70,9 +74,12 @@ export async function queryRAG({
     }
   }
 
+  const systemPrompt =
+    RAG_SYSTEM_PROMPT + buildNovaSystemAugmentation(alaeContext ?? null);
+
   const answer = await provider.chat({
     messages: [
-      { role: "system", content: RAG_SYSTEM_PROMPT },
+      { role: "system", content: systemPrompt },
       {
         role: "user",
         content: `Contexto empresarial:\n${context}\n\n---\n\nPregunta del empleado: ${question}`,

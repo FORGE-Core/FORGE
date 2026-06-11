@@ -13,6 +13,9 @@ export type DocumentItem = {
   chunkCount: number;
   embeddingCount?: number;
   contentGenerated?: boolean;
+  inclusionScore?: number | null;
+  inclusionIssues?: string[];
+  inclusionRecommendations?: string[];
   createdAt: string;
   hasFile: boolean;
 };

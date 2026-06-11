@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { InclusionScoreCard } from "@/components/alae/inclusion-score-card";
+import { InclusionIssuesList } from "@/components/alae/inclusion-issues-list";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { DocumentItem } from "./document-list";
 import { cn } from "@/lib/utils";
@@ -67,6 +69,7 @@ export function DocumentCard({
   const [deleting, setDeleting] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [reprocessing, setReprocessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showVideo, setShowVideo] = useState(false);
 
@@ -96,6 +99,23 @@ export function DocumentCard({
       setError(err instanceof Error ? err.message : "Error al descargar");
     } finally {
       setDownloading(false);
+    }
+  }
+
+  async function handleReprocess() {
+    setReprocessing(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/documents/${doc.id}/reprocess`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Error al reprocesar");
+      onRefresh?.();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al reprocesar");
+    } finally {
+      setReprocessing(false);
     }
   }
 
@@ -244,6 +264,34 @@ export function DocumentCard({
               </>
             ) : (
               <>
+                {doc.inclusionScore != null && (
+                  <div className="space-y-3 rounded-2xl border border-brand-lavender/20 bg-brand-champagne/20 p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <p className="text-sm font-medium">Inclusión ALAE</p>
+                      <InclusionScoreCard
+                        score={doc.inclusionScore}
+                        size="sm"
+                      />
+                    </div>
+                    {doc.inclusionIssues && doc.inclusionIssues.length > 0 && (
+                      <InclusionIssuesList
+                        issues={doc.inclusionIssues.map((message, i) => ({
+                          code: `issue-${i}`,
+                          severity: "medium",
+                          message,
+                        }))}
+                        recommendations={
+                          doc.inclusionRecommendations?.length
+                            ? doc.inclusionRecommendations
+                            : [
+                                "Simplifica el lenguaje del documento",
+                                "Agrega ejemplos prácticos del día a día",
+                              ]
+                        }
+                      />
+                    )}
+                  </div>
+                )}
                 {canManage && (
                   <ul className="grid gap-2 sm:grid-cols-2">
                     {[
@@ -320,6 +368,18 @@ export function DocumentCard({
               nuevo.
             </p>
             <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                disabled={reprocessing}
+                onClick={handleReprocess}
+              >
+                {reprocessing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4" />
+                )}
+                Reprocesar
+              </Button>
               {canDownload && (
                 <Button variant="outline" size="sm" onClick={handleDownload}>
                   <Download className="h-4 w-4" />

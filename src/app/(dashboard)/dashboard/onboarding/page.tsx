@@ -1,8 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, FileText, Sparkles, Users } from "lucide-react";
+import {
+  CheckCircle2,
+  Circle,
+  FileText,
+  Loader2,
+  Sparkles,
+  Users,
+} from "lucide-react";
+import { FeedbackBanner } from "@/components/shared/feedback-banner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DocumentUploadZone } from "@/components/documents/document-upload-zone";
@@ -10,44 +18,117 @@ import { DocumentUploadZone } from "@/components/documents/document-upload-zone"
 const steps = [
   {
     id: 1,
+    key: "documents" as const,
     title: "Sube tu primer manual",
     desc: "PDF operativo de tu empresa. La IA lo indexará y generará contenido.",
     icon: FileText,
   },
   {
     id: 2,
+    key: "team" as const,
     title: "Invita a tu equipo",
     desc: "Crea cuentas para empleados y supervisores.",
     icon: Users,
   },
   {
     id: 3,
+    key: "chat" as const,
     title: "Activa el mentor IA",
     desc: "Prueba preguntas sobre procesos con fuentes oficiales.",
     icon: Sparkles,
   },
 ];
 
+type OnboardingStatus = {
+  completed: boolean;
+  steps: { documents: boolean; team: boolean; chat: boolean };
+  isAdmin: boolean;
+};
+
 export default function OnboardingPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
-  const [done, setDone] = useState<number[]>([]);
+  const [status, setStatus] = useState<OnboardingStatus | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadStatus = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/onboarding/status");
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "No se pudo cargar el estado");
+        return;
+      }
+      setStatus(data);
+      if (data.completed) {
+        router.replace("/dashboard");
+        return;
+      }
+      if (!data.steps.documents) setStep(1);
+      else if (!data.steps.team) setStep(2);
+      else if (!data.steps.chat) setStep(3);
+    } catch {
+      setError("Error de conexión");
+    } finally {
+      setLoading(false);
+    }
+  }, [router]);
+
+  useEffect(() => {
+    loadStatus();
+  }, [loadStatus]);
 
   async function completeOnboarding() {
-    await fetch("/api/organization", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        notifications: { onboardingCompleted: true },
-      }),
-    });
-    router.push("/dashboard");
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/organization", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          notifications: { onboardingCompleted: true },
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "No se pudo finalizar el onboarding");
+        return;
+      }
+      router.push("/dashboard");
+      router.refresh();
+    } catch {
+      setError("Error de conexión al guardar");
+    } finally {
+      setSaving(false);
+    }
   }
 
-  function markDone(id: number) {
-    setDone((d) => (d.includes(id) ? d : [...d, id]));
-    if (id < 3) setStep(id + 1);
+  if (loading) {
+    return (
+      <p className="flex items-center gap-2 text-sm text-brand-muted-gray">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Preparando configuración…
+      </p>
+    );
   }
+
+  if (!status?.isAdmin) {
+    return (
+      <div className="mx-auto max-w-lg space-y-4 py-12 text-center">
+        <h1 className="font-heading text-2xl font-bold">Onboarding</h1>
+        <p className="text-brand-muted-gray">
+          La configuración inicial la realiza el administrador de tu empresa.
+        </p>
+        <Button onClick={() => router.push("/dashboard")}>Ir al dashboard</Button>
+      </div>
+    );
+  }
+
+  const stepDone = (key: keyof OnboardingStatus["steps"]) =>
+    status?.steps[key] ?? false;
 
   return (
     <div className="mx-auto max-w-2xl space-y-8 pb-8">
@@ -60,6 +141,8 @@ export default function OnboardingPage() {
         </p>
       </div>
 
+      {error && <FeedbackBanner variant="error" message={error} />}
+
       <div className="flex justify-center gap-2">
         {steps.map((s) => (
           <button
@@ -69,7 +152,7 @@ export default function OnboardingPage() {
             className={`h-2 w-12 rounded-full transition-colors ${
               step === s.id
                 ? "gradient-brand"
-                : done.includes(s.id)
+                : stepDone(s.key)
                   ? "bg-emerald-400"
                   : "bg-black/10"
             }`}
@@ -86,6 +169,9 @@ export default function OnboardingPage() {
               return <Icon className="h-5 w-5 text-brand-cobalt" />;
             })()}
             Paso {step}: {steps[step - 1].title}
+            {stepDone(steps[step - 1].key) && (
+              <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -93,13 +179,35 @@ export default function OnboardingPage() {
             {steps[step - 1].desc}
           </p>
 
+          <ul className="space-y-2 text-sm">
+            {steps.map((s) => (
+              <li key={s.key} className="flex items-center gap-2">
+                {stepDone(s.key) ? (
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                ) : (
+                  <Circle className="h-4 w-4 text-brand-muted-gray/40" />
+                )}
+                <span
+                  className={
+                    stepDone(s.key) ? "text-emerald-800" : "text-brand-muted-gray"
+                  }
+                >
+                  {s.title}
+                </span>
+              </li>
+            ))}
+          </ul>
+
           {step === 1 && (
             <>
               <DocumentUploadZone
-                onUploaded={() => markDone(1)}
+                onUploaded={() => {
+                  void loadStatus();
+                  setStep(2);
+                }}
               />
-              <Button variant="outline" onClick={() => markDone(1)}>
-                Omitir por ahora
+              <Button variant="outline" onClick={() => setStep(2)}>
+                Continuar sin subir ahora
               </Button>
             </>
           )}
@@ -109,7 +217,7 @@ export default function OnboardingPage() {
               <Button onClick={() => router.push("/dashboard/team")}>
                 Ir a equipo
               </Button>
-              <Button variant="outline" onClick={() => markDone(2)}>
+              <Button variant="outline" onClick={() => setStep(3)}>
                 Continuar
               </Button>
             </div>
@@ -120,8 +228,12 @@ export default function OnboardingPage() {
               <Button onClick={() => router.push("/dashboard/chat")}>
                 Probar mentor IA
               </Button>
-              <Button onClick={completeOnboarding}>
-                <CheckCircle2 className="h-4 w-4" />
+              <Button onClick={completeOnboarding} disabled={saving}>
+                {saving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="h-4 w-4" />
+                )}
                 Finalizar onboarding
               </Button>
             </div>

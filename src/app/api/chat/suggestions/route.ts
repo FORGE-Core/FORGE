@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
+import { getAlaeContextForUser } from "@/lib/alae/accessibility-profile";
 import { db } from "@/lib/db";
 
 const DEFAULT_SUGGESTIONS = [
@@ -13,33 +14,60 @@ export async function GET() {
   try {
     const session = await auth();
     const organizationId = session?.user?.organizationId;
+    const userId = session?.user?.id;
 
     if (!organizationId) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
-    const docs = await db.document.findMany({
-      where: { organizationId, status: "READY" },
-      select: { title: true },
-      take: 4,
-      orderBy: { createdAt: "desc" },
-    });
+    const [docs, processes, alae] = await Promise.all([
+      db.document.findMany({
+        where: { organizationId, status: "READY" },
+        select: { title: true },
+        take: 4,
+        orderBy: { createdAt: "desc" },
+      }),
+      db.process.findMany({
+        where: { organizationId },
+        select: { title: true },
+        take: 5,
+        orderBy: { orderIndex: "asc" },
+      }),
+      userId
+        ? getAlaeContextForUser(userId, organizationId)
+        : Promise.resolve(null),
+    ]);
 
     const fromDocs = docs.map((d) => `¿Qué dice el manual sobre ${d.title}?`);
-    const suggestions =
+    const suggestions: string[] =
       fromDocs.length >= 2
-        ? [...fromDocs.slice(0, 3), DEFAULT_SUGGESTIONS[1]]
-        : DEFAULT_SUGGESTIONS;
+        ? [...fromDocs.slice(0, 3)]
+        : [...DEFAULT_SUGGESTIONS.slice(0, 3)];
 
-    const processes = await db.process.findMany({
-      where: { organizationId },
+    if (alae?.declaredNeeds.examples) {
+      suggestions.push("Dame un ejemplo práctico de este proceso");
+    }
+    if (alae?.declaredNeeds.simulations) {
+      suggestions.push("¿Qué harías en una situación difícil con un cliente?");
+    }
+    if (alae?.accessibility.simplifiedLanguage) {
+      suggestions.push("Explícamelo más fácil con palabras sencillas");
+    }
+    if (alae?.accessibility.stepByStepMode) {
+      suggestions.push("Guíame paso a paso el procedimiento");
+    }
+
+    const modules = await db.trainingModule.findMany({
+      where: { organizationId, status: "PUBLISHED" },
       select: { title: true },
-      take: 5,
-      orderBy: { orderIndex: "asc" },
+      take: 1,
     });
+    if (modules[0]) {
+      suggestions.push(`Resume el módulo «${modules[0].title}» en 5 puntos`);
+    }
 
     return NextResponse.json({
-      suggestions,
+      suggestions: [...new Set(suggestions)].slice(0, 6),
       processes: processes.map((p) => p.title),
     });
   } catch (error) {

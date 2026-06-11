@@ -19,7 +19,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import type { ModuleCardData } from "@/components/modules/module-card";
+import { AlaeAdaptButtons } from "@/components/alae/alae-adapt-buttons";
+import { InclusionIssuesList } from "@/components/alae/inclusion-issues-list";
+import { InclusionScoreCard } from "@/components/alae/inclusion-score-card";
 import { ModuleVideoManager } from "@/components/modules/module-video-manager";
+import { ModuleVideoPlayer } from "@/components/modules/module-video-player";
 import { cn } from "@/lib/utils";
 
 type LessonItem = {
@@ -46,6 +50,9 @@ type ModuleDetail = ModuleCardData & {
   canManage: boolean;
   lessons?: LessonItem[];
   resources?: ResourceItem[];
+  inclusionScore?: number | null;
+  inclusionIssues?: string[];
+  inclusionRecommendations?: string[];
 };
 
 export default function ModuleDetailPage({
@@ -110,15 +117,21 @@ export default function ModuleDetailPage({
         <div className="space-y-6 xl:col-span-2">
           {trainingModule.hasVideo && showVideo && videoUrl ? (
             <div className="overflow-hidden rounded-[28px] shadow-lg ring-1 ring-black/5">
-              <video
-                controls
-                className="aspect-video w-full bg-black"
+              <ModuleVideoPlayer
                 src={videoUrl}
-                preload="metadata"
-                playsInline
-              >
-                Tu navegador no soporta reproducción de video.
-              </video>
+                title={trainingModule.title}
+                captionText={trainingModule.description}
+                onPlay={() => {
+                  void fetch("/api/alae/modality", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      modality: "LISTENING",
+                      source: "module-video",
+                    }),
+                  });
+                }}
+              />
               <div className="bg-brand-dark-bg px-6 py-4 text-white">
                 <Badge className="mb-2 bg-white/20 text-white">
                   {trainingModule.category}
@@ -260,6 +273,39 @@ export default function ModuleDetailPage({
         </div>
 
         <div className="space-y-6">
+          {trainingModule.inclusionScore != null && (
+            <Card className="border-brand-lavender/20 bg-brand-champagne/30">
+              <CardHeader>
+                <CardTitle className="text-base">Inclusión ALAE</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-brand-muted-gray">
+                    Claridad y accesibilidad del contenido
+                  </p>
+                  <InclusionScoreCard
+                    score={trainingModule.inclusionScore}
+                    size="sm"
+                  />
+                </div>
+                {(trainingModule.inclusionIssues?.length ?? 0) > 0 && (
+                  <InclusionIssuesList
+                    issues={(trainingModule.inclusionIssues ?? []).map(
+                      (message, i) => ({
+                        code: `issue-${i}`,
+                        severity: "medium",
+                        message,
+                      })
+                    )}
+                    recommendations={
+                      trainingModule.inclusionRecommendations ?? []
+                    }
+                  />
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           <Card className="sticky top-8 border-brand-lavender/20">
             <CardHeader>
               <div className="flex items-center gap-2">
@@ -274,6 +320,14 @@ export default function ModuleDetailPage({
               <p className="text-sm leading-relaxed text-brand-muted-gray">
                 {trainingModule.description}
               </p>
+              {trainingModule.description && (
+                <AlaeAdaptButtons
+                  content={trainingModule.description}
+                  title={trainingModule.title}
+                  sourceId={trainingModule.id}
+                  sourceType="MODULE"
+                />
+              )}
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Tu progreso</span>

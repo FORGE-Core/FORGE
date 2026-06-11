@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { ensureModuleQuiz } from "@/lib/activities/quiz";
 import {
   parseErrorDetectionContent,
   parseOrderStepsContent,
@@ -85,15 +84,6 @@ export async function GET(req: Request) {
       });
       if (!mod) {
         return NextResponse.json({ error: "Módulo no encontrado" }, { status: 404 });
-      }
-      await ensureModuleQuiz(organizationId, mod.id, mod.title);
-    } else {
-      const modules = await db.trainingModule.findMany({
-        where: { organizationId, status: "PUBLISHED" },
-        take: 1,
-      });
-      if (modules[0]) {
-        await ensureModuleQuiz(organizationId, modules[0].id, modules[0].title);
       }
     }
 

@@ -238,6 +238,10 @@ export async function seedTenant(db: PrismaClient, tenant: TenantDefinition) {
 
   console.log(`   ✓ Índice — ${readmeChunks.length} fragmentos`);
 
+  const { seedAlaeForOrganization } = await import("@/lib/alae/seed-profiles");
+  await seedAlaeForOrganization(db, org.id);
+  console.log("   ✓ Perfiles ALAE e Inclusion Score inicial");
+
   return { org, tenant };
 }
 

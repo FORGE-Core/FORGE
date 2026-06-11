@@ -1,9 +1,11 @@
 import { getAIProvider } from "@/ai/providers";
+import { buildNovaSystemAugmentation } from "@/lib/alae/prompts";
+import type { AlaeContext } from "@/lib/alae/types";
 import { getEnv } from "@/lib/env";
 import { db } from "@/lib/db";
 import { searchSimilarChunks } from "./retriever";
 
-const RAG_SYSTEM_PROMPT = `Eres un mentor de capacitación empresarial de FORGE.
+const RAG_SYSTEM_PROMPT = `Eres NOVA, mentor de capacitación empresarial de FORGE.
 REGLAS ESTRICTAS:
 - Responde ÚNICAMENTE con la información del contexto proporcionado cuando exista.
 - Si no hay contexto, orienta brevemente y sugiere subir manuales.
@@ -62,17 +64,21 @@ export async function prepareRAGContext(
 export async function* streamRAGAnswer({
   organizationId,
   question,
+  alaeContext,
 }: {
   organizationId: string;
   question: string;
+  alaeContext?: AlaeContext | null;
 }) {
   const { context } = await prepareRAGContext(organizationId, question);
   const provider = getAIProvider();
+  const systemPrompt =
+    RAG_SYSTEM_PROMPT + buildNovaSystemAugmentation(alaeContext ?? null);
 
   if (provider.chatStream) {
     const stream = provider.chatStream({
       messages: [
-        { role: "system", content: RAG_SYSTEM_PROMPT },
+        { role: "system", content: systemPrompt },
         {
           role: "user",
           content: `Contexto de documentos:\n${context}\n\nPregunta: ${question}`,
@@ -89,7 +95,7 @@ export async function* streamRAGAnswer({
 
   const answer = await provider.chat({
     messages: [
-      { role: "system", content: RAG_SYSTEM_PROMPT },
+      { role: "system", content: systemPrompt },
       {
         role: "user",
         content: `Contexto de documentos:\n${context}\n\nPregunta: ${question}`,
