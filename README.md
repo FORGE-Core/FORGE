@@ -6,7 +6,7 @@ Cappi convierte la documentación interna de cada empresa — manuales, procedim
 
 No es un chatbot genérico. Es un **mentor IA** que responde con el conocimiento *de tu empresa*, combinado con módulos de capacitación, seguimiento de progreso, actividades evaluativas y reportes para supervisión.
 
-> En la interfaz de producto aparece la marca **FORGE** en algunas pantallas (landing, sidebar). El repositorio y el producto backend se denominan **Cappi**.
+> En la interfaz de producto aparece la marca **FORGE** en algunas pantallas (landing, sidebar). El repositorio y el producto backend se denominan  **Cappi**.
 
 ---
 
