@@ -1,15 +1,13 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
 import { db } from "@/lib/db";
+import { requireTenantApi } from "@/lib/api/tenant-route";
 
 export async function GET(req: Request) {
   try {
-    const session = await auth();
-    const organizationId = session?.user?.organizationId;
+    const tenant = await requireTenantApi();
+    if (!tenant.ok) return tenant.response;
 
-    if (!organizationId) {
-      return NextResponse.json({ error: "Debes iniciar sesión" }, { status: 401 });
-    }
+    const organizationId = tenant.ctx.organizationId;
 
     const { searchParams } = new URL(req.url);
     const index = Math.max(0, Number(searchParams.get("index") ?? 0));

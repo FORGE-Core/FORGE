@@ -22,6 +22,8 @@ import { ProgressBar } from "@/components/ui/progress-bar";
 import { useAccessibility } from "@/components/alae/accessibility-provider";
 import { FeedbackBanner } from "@/components/shared/feedback-banner";
 import { cn } from "@/lib/utils";
+import { activitiesClient } from "@/services/client";
+import { ApiClientError } from "@/services/client/http";
 
 type ActivityData = {
   id: string;
@@ -68,21 +70,16 @@ export default function ActivitiesContent() {
     setLoading(true);
     setLoadError(null);
     try {
-      const params = new URLSearchParams();
-      if (moduleId) params.set("moduleId", moduleId);
-      params.set("index", String(index));
-      const res = await fetch(`/api/activities?${params}`);
-      const data = await res.json();
-      if (!res.ok) {
-        setLoadError(data.error ?? "No se pudieron cargar las actividades");
-        setActivity(null);
-        return;
-      }
+      const data = await activitiesClient.getAtIndex({
+        moduleId: moduleId ?? undefined,
+        index,
+      });
       if (data.activity) {
-        setActivity(data.activity);
+        const act = data.activity as ActivityData;
+        setActivity(act);
         setOrder(
-          data.activity.type === "ORDER_STEPS"
-            ? (data.activity.steps ?? []).map((s: { id: string }) => s.id)
+          act.type === "ORDER_STEPS"
+            ? (act.steps ?? []).map((s) => s.id)
             : []
         );
         setSelected(null);
@@ -95,9 +92,11 @@ export default function ActivitiesContent() {
       } else {
         setActivity(null);
       }
-    } catch {
+    } catch (err) {
       setActivity(null);
-      setLoadError("Error de conexión");
+      setLoadError(
+        err instanceof ApiClientError ? err.message : "Error de conexión"
+      );
     } finally {
       setLoading(false);
     }
@@ -114,21 +113,15 @@ export default function ActivitiesContent() {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const res = await fetch(`/api/activities/${activity.id}/attempt`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(answers),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setPassed(!!data.passed);
-        setExplanation(data.explanation ?? activity.explanation ?? null);
-      } else {
-        setSubmitError(data.error ?? "No se pudo enviar la respuesta");
-        setExplanation(activity.explanation ?? null);
-      }
-    } catch {
-      setSubmitError("Error de conexión. Intenta de nuevo.");
+      const data = await activitiesClient.submitAttempt(activity.id, answers);
+      setPassed(!!data.passed);
+      setExplanation(
+        (data.explanation as string | undefined) ?? activity.explanation ?? null
+      );
+    } catch (err) {
+      setSubmitError(
+        err instanceof ApiClientError ? err.message : "No se pudo enviar la respuesta"
+      );
       setExplanation(activity.explanation ?? null);
     } finally {
       setSubmitting(false);

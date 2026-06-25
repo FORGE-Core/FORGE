@@ -1,27 +1,21 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
-import { assertAdminSession, canManageDocuments } from "@/lib/auth/roles";
+import { canManageDocuments } from "@/lib/auth/roles";
 import { db } from "@/lib/db";
 import { getLatestInclusionScores } from "@/lib/alae/inclusion-scorer";
 import { getOrganizationModuleBySlug } from "@/lib/training/modules";
-import { getModuleVideo } from "@/services/documents/upload-module-video";
+import { getModuleVideo } from "@/services/server/documents/upload-module-video";
+import { requireAdminApi, requireTenantApi } from "@/lib/api/tenant-route";
 
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const session = await auth();
-    const organizationId = session?.user?.organizationId;
-    const userId = session?.user?.id;
-    const { slug } = await params;
+    const tenant = await requireTenantApi();
+    if (!tenant.ok) return tenant.response;
 
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: "Debes iniciar sesi?n" },
-        { status: 401 }
-      );
-    }
+    const { organizationId, userId, role } = tenant.ctx;
+    const { slug } = await params;
 
     const result = await getOrganizationModuleBySlug(
       organizationId,
@@ -37,7 +31,7 @@ export async function GET(
     }
 
     const video = await getModuleVideo(organizationId, result.module.id);
-    const canManage = canManageDocuments(session?.user?.role);
+    const canManage = canManageDocuments(role);
 
     const inclusionScores = await getLatestInclusionScores(
       organizationId,
@@ -129,15 +123,10 @@ export async function PATCH(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const check = await assertAdminSession(await auth());
-    if (!check.ok) {
-      return NextResponse.json(
-        { error: check.error },
-        { status: check.status }
-      );
-    }
+    const tenant = await requireAdminApi();
+    if (!tenant.ok) return tenant.response;
 
-    const organizationId = check.session.user.organizationId!;
+    const organizationId = tenant.ctx.organizationId;
     const { slug } = await params;
     const body = await req.json();
 
@@ -180,15 +169,10 @@ export async function DELETE(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const check = await assertAdminSession(await auth());
-    if (!check.ok) {
-      return NextResponse.json(
-        { error: check.error },
-        { status: check.status }
-      );
-    }
+    const tenant = await requireAdminApi();
+    if (!tenant.ok) return tenant.response;
 
-    const organizationId = check.session.user.organizationId!;
+    const organizationId = tenant.ctx.organizationId;
     const { slug } = await params;
 
     const existing = await db.trainingModule.findFirst({

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
 import { getAlaeContextForUser } from "@/lib/alae/accessibility-profile";
 import { db } from "@/lib/db";
+import { requireTenantApi } from "@/lib/api/tenant-route";
 
 const DEFAULT_SUGGESTIONS = [
   "¿Cómo registro una devolución?",
@@ -12,13 +12,10 @@ const DEFAULT_SUGGESTIONS = [
 
 export async function GET() {
   try {
-    const session = await auth();
-    const organizationId = session?.user?.organizationId;
-    const userId = session?.user?.id;
+    const tenant = await requireTenantApi();
+    if (!tenant.ok) return tenant.response;
 
-    if (!organizationId) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
+    const { organizationId, userId } = tenant.ctx;
 
     const [docs, processes, alae] = await Promise.all([
       db.document.findMany({

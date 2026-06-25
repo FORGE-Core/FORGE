@@ -16,6 +16,7 @@ import {
 } from "@/lib/alae/profile-cache";
 import type { AccessibilityProfileData } from "@/lib/alae/types";
 import { speakText, stopSpeaking } from "@/lib/alae/speech";
+import { accessibilityClient } from "@/services/client";
 
 const PreferenceWizard = dynamic(
   () =>
@@ -87,13 +88,13 @@ export function AccessibilityProvider({
 
   const refresh = useCallback(async () => {
     try {
-      const res = await fetch("/api/accessibility/profile");
-      const data = await res.json();
-      if (res.ok && data.profile) {
-        setProfile(data.profile);
-        applyDomEffects(data.profile);
-        writeCachedProfile(data.profile);
-        if (!data.profile.wizardCompleted) setShowWizard(true);
+      const data = await accessibilityClient.getProfile();
+      if (data.profile) {
+        const profile = data.profile as AccessibilityProfileData;
+        setProfile(profile);
+        applyDomEffects(profile);
+        writeCachedProfile(profile);
+        if (!profile.wizardCompleted) setShowWizard(true);
       }
     } catch {
       applyDomEffects(readCachedProfile() ?? DEFAULTS);
@@ -113,16 +114,12 @@ export function AccessibilityProvider({
       applyDomEffects(next);
       writeCachedProfile(next);
 
-      const res = await fetch("/api/accessibility/profile", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(patch),
-      });
-      const data = await res.json();
-      if (res.ok && data.profile) {
-        setProfile(data.profile);
-        applyDomEffects(data.profile);
-        writeCachedProfile(data.profile);
+      const data = await accessibilityClient.updateProfile(patch);
+      if (data.profile) {
+        const updated = data.profile as AccessibilityProfileData;
+        setProfile(updated);
+        applyDomEffects(updated);
+        writeCachedProfile(updated);
       }
     },
     [profile]

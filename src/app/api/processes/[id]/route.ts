@@ -1,53 +1,29 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
-import { assertAdminSession } from "@/lib/auth/roles";
-import { db } from "@/lib/db";
+import { serviceErrorResponse } from "@/lib/api/service-response";
+import { requireAdminApi } from "@/lib/api/tenant-route";
+import { deleteProcess, updateProcess } from "@/services/server/processes";
 
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const check = await assertAdminSession(await auth());
-    if (!check.ok) {
-      return NextResponse.json(
-        { error: check.error },
-        { status: check.status }
-      );
-    }
+    const tenant = await requireAdminApi();
+    if (!tenant.ok) return tenant.response;
 
-    const organizationId = check.session.user.organizationId!;
     const { id } = await params;
     const body = await req.json();
 
-    const existing = await db.process.findFirst({
-      where: { id, organizationId },
-    });
-
-    if (!existing) {
-      return NextResponse.json(
-        { error: "Proceso no encontrado" },
-        { status: 404 }
-      );
-    }
-
-    const process = await db.process.update({
-      where: { id },
-      data: {
-        title: body.title?.trim() ?? existing.title,
-        description: body.description?.trim() ?? existing.description,
-        steps: body.steps ?? existing.steps,
-        moduleId: body.moduleId ?? existing.moduleId,
-      },
+    const process = await updateProcess(tenant.admin, id, {
+      title: body.title,
+      description: body.description,
+      moduleId: body.moduleId,
+      steps: body.steps,
     });
 
     return NextResponse.json({ process });
   } catch (error) {
-    console.error("[processes PATCH]", error);
-    return NextResponse.json(
-      { error: "No se pudo actualizar el proceso" },
-      { status: 500 }
-    );
+    return serviceErrorResponse(error);
   }
 }
 
@@ -56,36 +32,13 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const check = await assertAdminSession(await auth());
-    if (!check.ok) {
-      return NextResponse.json(
-        { error: check.error },
-        { status: check.status }
-      );
-    }
+    const tenant = await requireAdminApi();
+    if (!tenant.ok) return tenant.response;
 
-    const organizationId = check.session.user.organizationId!;
     const { id } = await params;
-
-    const existing = await db.process.findFirst({
-      where: { id, organizationId },
-    });
-
-    if (!existing) {
-      return NextResponse.json(
-        { error: "Proceso no encontrado" },
-        { status: 404 }
-      );
-    }
-
-    await db.process.delete({ where: { id } });
-
-    return NextResponse.json({ ok: true });
+    const result = await deleteProcess(tenant.admin, id);
+    return NextResponse.json(result);
   } catch (error) {
-    console.error("[processes DELETE]", error);
-    return NextResponse.json(
-      { error: "No se pudo eliminar el proceso" },
-      { status: 500 }
-    );
+    return serviceErrorResponse(error);
   }
 }

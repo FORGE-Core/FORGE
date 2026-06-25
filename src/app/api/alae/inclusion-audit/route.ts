@@ -1,22 +1,23 @@
-import { auth } from "@/auth";
 import { checkApiRateLimit } from "@/lib/api-guard";
 import {
   auditContentInclusion,
   saveInclusionAudit,
 } from "@/lib/alae/inclusion-scorer";
 import { canViewReports } from "@/lib/auth/roles";
+import {
+  requireTenantApi,
+  tenantAuthJsonError,
+} from "@/lib/api/tenant-route";
 
 export async function POST(req: Request) {
-  const session = await auth();
-  const organizationId = session?.user?.organizationId;
+  const tenant = await requireTenantApi();
+  if (!tenant.ok) return tenant.response;
+
+  const { organizationId, userId } = tenant.ctx;
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0] ?? null;
 
-  const guard = checkApiRateLimit(session?.user?.id, ip, 20);
+  const guard = checkApiRateLimit(userId, ip, 20);
   if (guard.blocked) return guard.response;
-
-  if (!organizationId) {
-    return Response.json({ error: "No autorizado" }, { status: 401 });
-  }
 
   let body: {
     text?: string;
@@ -49,12 +50,16 @@ export async function POST(req: Request) {
 }
 
 export async function GET(req: Request) {
-  const session = await auth();
-  const organizationId = session?.user?.organizationId;
-  const role = session?.user?.role;
+  const tenant = await requireTenantApi();
+  if (!tenant.ok) return tenant.response;
 
-  if (!organizationId || !canViewReports(role)) {
-    return Response.json({ error: "No autorizado" }, { status: 403 });
+  const { organizationId, role } = tenant.ctx;
+  if (!canViewReports(role)) {
+    return tenantAuthJsonError({
+      ok: false,
+      status: 403,
+      error: "No autorizado",
+    });
   }
 
   const targetId = new URL(req.url).searchParams.get("targetId");

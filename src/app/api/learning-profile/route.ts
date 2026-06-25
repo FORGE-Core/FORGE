@@ -1,21 +1,18 @@
-import { auth } from "@/auth";
 import {
   applyWizardToProfiles,
   getOrCreateLearningProfile,
   serializeLearningProfile,
 } from "@/lib/alae/learning-profile";
 import { db } from "@/lib/db";
+import { requireTenantApi } from "@/lib/api/tenant-route";
 import type { LearningModality, SupportLevel } from "@prisma/client";
 
 export async function GET() {
   try {
-    const session = await auth();
-    const userId = session?.user?.id;
-    const organizationId = session?.user?.organizationId;
-    if (!userId || !organizationId) {
-      return Response.json({ error: "No autorizado" }, { status: 401 });
-    }
+    const tenant = await requireTenantApi();
+    if (!tenant.ok) return tenant.response;
 
+    const { userId, organizationId } = tenant.ctx;
     const profile = await getOrCreateLearningProfile(userId, organizationId);
     return Response.json({ profile: serializeLearningProfile(profile) });
   } catch (error) {
@@ -29,12 +26,10 @@ export async function GET() {
 
 export async function PATCH(req: Request) {
   try {
-    const session = await auth();
-    const userId = session?.user?.id;
-    const organizationId = session?.user?.organizationId;
-    if (!userId || !organizationId) {
-      return Response.json({ error: "No autorizado" }, { status: 401 });
-    }
+    const tenant = await requireTenantApi();
+    if (!tenant.ok) return tenant.response;
+
+    const { userId, organizationId } = tenant.ctx;
 
     let body: Record<string, unknown>;
     try {

@@ -7,13 +7,16 @@ import { FeedbackBanner } from "@/components/shared/feedback-banner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { OrganizationSettingsData } from "@/lib/organization/settings";
+import { organizationClient } from "@/services/client";
+import { ApiClientError } from "@/services/client/http";
+import { useTenantPermissions } from "@/providers/tenant-provider";
 
 type SettingsContentProps = {
   initialOrg: OrganizationSettingsData;
-  isAdmin: boolean;
 };
 
-export function SettingsContent({ initialOrg, isAdmin }: SettingsContentProps) {
+export function SettingsContent({ initialOrg }: SettingsContentProps) {
+  const { isAdmin } = useTenantPermissions();
   const [org, setOrg] = useState(initialOrg);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{
@@ -32,39 +35,39 @@ export function SettingsContent({ initialOrg, isAdmin }: SettingsContentProps) {
     setSaving(true);
     setSaveMessage(null);
     try {
-      const res = await fetch("/api/organization", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name,
-          notifications,
-          alae: { minAcceptableScore: inclusionMinScore },
-        }),
+      const data = await organizationClient.update({
+        name,
+        notifications,
+        alae: { minAcceptableScore: inclusionMinScore },
       });
-      const data = await res.json();
-      if (res.ok) {
-        setSaveMessage({
-          type: "success",
-          text: "Cambios guardados correctamente",
-        });
-        if (data.organization) {
-          setOrg({
-            name: data.organization.name ?? name,
-            plan: data.organization.plan ?? org.plan,
-            industry: data.organization.industry ?? org.industry,
-            stats: data.organization.stats ?? org.stats,
-            notifications,
-            inclusionMinScore,
-          });
-        }
-      } else {
-        setSaveMessage({
-          type: "error",
-          text: data.error ?? "No se pudieron guardar los cambios",
+      setSaveMessage({
+        type: "success",
+        text: "Cambios guardados correctamente",
+      });
+      if (data.organization) {
+        const orgData = data.organization as {
+          name?: string;
+          plan?: string;
+          industry?: string;
+          stats?: OrganizationSettingsData["stats"];
+        };
+        setOrg({
+          name: orgData.name ?? name,
+          plan: orgData.plan ?? org.plan,
+          industry: orgData.industry ?? org.industry,
+          stats: orgData.stats ?? org.stats,
+          notifications,
+          inclusionMinScore,
         });
       }
-    } catch {
-      setSaveMessage({ type: "error", text: "Error de conexión al guardar" });
+    } catch (err) {
+      setSaveMessage({
+        type: "error",
+        text:
+          err instanceof ApiClientError
+            ? err.message
+            : "Error de conexión al guardar",
+      });
     } finally {
       setSaving(false);
     }

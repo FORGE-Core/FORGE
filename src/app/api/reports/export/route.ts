@@ -1,30 +1,27 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
-import { getReportsOverview } from "@/lib/analytics/reports";
 import { canViewReports } from "@/lib/auth/roles";
+import { serviceErrorResponse } from "@/lib/api/service-response";
+import {
+  buildOrganizationContext,
+  requireTenantApi,
+} from "@/lib/api/tenant-route";
+import { getReportsOverview } from "@/services/server/reports";
 import { db } from "@/lib/db";
 
 export async function GET() {
   try {
-    const session = await auth();
-    const organizationId = session?.user?.organizationId;
-    const role = session?.user?.role;
+    const tenant = await requireTenantApi();
+    if (!tenant.ok) return tenant.response;
 
-    if (!organizationId) {
-      return NextResponse.json({ error: "Debes iniciar sesión" }, { status: 401 });
-    }
-
-    if (!canViewReports(role)) {
+    const orgCtx = buildOrganizationContext(tenant.session);
+    if (!canViewReports(orgCtx.role)) {
       return NextResponse.json({ error: "Sin permiso" }, { status: 403 });
     }
 
-    const overview = await getReportsOverview(organizationId, role);
-    if (!overview) {
-      return NextResponse.json({ error: "Sin datos" }, { status: 404 });
-    }
+    const overview = await getReportsOverview(orgCtx);
 
     const users = await db.user.findMany({
-      where: { organizationId, status: "ACTIVE" },
+      where: { organizationId: orgCtx.organizationId, status: "ACTIVE" },
       select: {
         name: true,
         email: true,
@@ -80,7 +77,6 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error("[reports/export]", error);
-    return NextResponse.json({ error: "Error al exportar" }, { status: 500 });
+    return serviceErrorResponse(error);
   }
 }

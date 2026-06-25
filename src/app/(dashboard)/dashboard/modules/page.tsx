@@ -26,10 +26,5 @@ export default async function ModulesPage() {
     }));
   }
 
-  return (
-    <ModulesContent
-      initialModules={modules}
-      isAdmin={isAdmin(session.user.role)}
-    />
-  );
+  return <ModulesContent initialModules={modules} />;
 }

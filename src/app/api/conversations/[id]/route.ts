@@ -1,37 +1,18 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
-import { db } from "@/lib/db";
+import { serviceErrorResponse } from "@/lib/api/service-response";
+import { requireTenantApi } from "@/lib/api/tenant-route";
+import { getConversation } from "@/services/server/chat";
 
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    const organizationId = session?.user?.organizationId;
-    const userId = session?.user?.id;
+    const tenant = await requireTenantApi();
+    if (!tenant.ok) return tenant.response;
+
     const { id } = await params;
-
-    if (!organizationId || !userId) {
-      return NextResponse.json(
-        { error: "Debes iniciar sesión" },
-        { status: 401 }
-      );
-    }
-
-    const conversation = await db.conversation.findFirst({
-      where: { id, organizationId, userId },
-      include: {
-        messages: { orderBy: { createdAt: "asc" } },
-      },
-    });
-
-    if (!conversation) {
-      return NextResponse.json(
-        { error: "Conversación no encontrada" },
-        { status: 404 }
-      );
-    }
+    const conversation = await getConversation(tenant.ctx, id);
 
     return NextResponse.json({
       conversation: {
@@ -47,10 +28,6 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("[conversations id GET]", error);
-    return NextResponse.json(
-      { error: "No se pudo cargar la conversación" },
-      { status: 500 }
-    );
+    return serviceErrorResponse(error);
   }
 }

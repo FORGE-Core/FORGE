@@ -23,5 +23,5 @@ export default async function TeamPage() {
 
   const users = await getTeamMembers(organizationId);
 
-  return <TeamContent initialUsers={users} isAdmin={isAdmin(role)} />;
+  return <TeamContent initialUsers={users} />;
 }

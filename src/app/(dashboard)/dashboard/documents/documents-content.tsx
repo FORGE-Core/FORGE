@@ -12,6 +12,9 @@ import { FeedbackBanner } from "@/components/shared/feedback-banner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import type { OrganizationDocumentItem } from "@/lib/documents/list";
+import { documentsClient } from "@/services/client";
+import { ApiClientError } from "@/services/client/http";
+import { useTenantPermissions } from "@/providers/tenant-provider";
 
 function toDocumentItem(d: OrganizationDocumentItem): DocumentItem {
   return {
@@ -33,36 +36,32 @@ function toDocumentItem(d: OrganizationDocumentItem): DocumentItem {
 
 type DocumentsContentProps = {
   initialDocuments: OrganizationDocumentItem[];
-  initialCanManage: boolean;
 };
 
 export function DocumentsContent({
   initialDocuments,
-  initialCanManage,
 }: DocumentsContentProps) {
+  const { canManageDocuments } = useTenantPermissions();
   const [documents, setDocuments] = useState<DocumentItem[]>(() =>
     initialDocuments.map(toDocumentItem)
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [canManage, setCanManage] = useState(initialCanManage);
+  const [canManage, setCanManage] = useState(canManageDocuments);
 
   const loadDocuments = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const res = await fetch("/api/documents");
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? "No se pudieron cargar los documentos");
-        return;
-      }
+      const data = await documentsClient.list();
       setCanManage(!!data.canManage);
       setDocuments(
         (data.documents as OrganizationDocumentItem[]).map(toDocumentItem)
       );
       setError(null);
-    } catch {
-      setError("Error de conexión");
+    } catch (err) {
+      setError(
+        err instanceof ApiClientError ? err.message : "Error de conexión"
+      );
     } finally {
       if (!silent) setLoading(false);
     }

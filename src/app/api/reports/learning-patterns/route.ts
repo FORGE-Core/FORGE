@@ -1,14 +1,21 @@
-import { auth } from "@/auth";
 import { getLearningPatternReport } from "@/lib/alae/learning-analytics";
 import { canViewReports } from "@/lib/auth/roles";
+import {
+  requireTenantApi,
+  tenantAuthJsonError,
+} from "@/lib/api/tenant-route";
 
 export async function GET() {
-  const session = await auth();
-  const organizationId = session?.user?.organizationId;
-  const role = session?.user?.role;
+  const tenant = await requireTenantApi();
+  if (!tenant.ok) return tenant.response;
 
-  if (!organizationId || !canViewReports(role)) {
-    return Response.json({ error: "No autorizado" }, { status: 403 });
+  const { organizationId, role } = tenant.ctx;
+  if (!canViewReports(role)) {
+    return tenantAuthJsonError({
+      ok: false,
+      status: 403,
+      error: "No autorizado",
+    });
   }
 
   const report = await getLearningPatternReport(organizationId);

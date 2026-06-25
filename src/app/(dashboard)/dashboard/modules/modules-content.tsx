@@ -11,18 +11,20 @@ import { FeedbackBanner } from "@/components/shared/feedback-banner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { trainingClient } from "@/services/client";
+import { ApiClientError } from "@/services/client/http";
+import { useTenantPermissions } from "@/providers/tenant-provider";
 
 const filters = ["Todos", "En progreso", "Pendientes", "Completados"];
 
 type ModulesContentProps = {
   initialModules: ModuleCardData[];
-  isAdmin: boolean;
 };
 
 export function ModulesContent({
   initialModules,
-  isAdmin,
 }: ModulesContentProps) {
+  const { isAdmin } = useTenantPermissions();
   const [filter, setFilter] = useState("Todos");
   const [modules, setModules] = useState(initialModules);
   const [showCreate, setShowCreate] = useState(false);
@@ -33,10 +35,9 @@ export function ModulesContent({
 
   const loadModules = useCallback(async () => {
     try {
-      const res = await fetch("/api/training-modules");
-      const data = await res.json();
-      if (res.ok && data.modules) {
-        setModules(data.modules);
+      const data = await trainingClient.listModules();
+      if (data.modules) {
+        setModules(data.modules as ModuleCardData[]);
       }
     } catch {
       setModules([]);
@@ -49,25 +50,18 @@ export function ModulesContent({
     setCreating(true);
     setCreateError(null);
     try {
-      const res = await fetch("/api/training-modules", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: newTitle.trim(),
-          description: newDescription.trim() || undefined,
-        }),
+      await trainingClient.createModule({
+        title: newTitle.trim(),
+        description: newDescription.trim() || undefined,
       });
-      const data = await res.json();
-      if (res.ok) {
-        setNewTitle("");
-        setNewDescription("");
-        setShowCreate(false);
-        await loadModules();
-      } else {
-        setCreateError(data.error ?? "No se pudo crear el módulo");
-      }
-    } catch {
-      setCreateError("Error de conexión");
+      setNewTitle("");
+      setNewDescription("");
+      setShowCreate(false);
+      await loadModules();
+    } catch (err) {
+      setCreateError(
+        err instanceof ApiClientError ? err.message : "Error de conexión"
+      );
     } finally {
       setCreating(false);
     }

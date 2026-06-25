@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { AccessDenied } from "@/components/shared/access-denied";
-import { getReportsOverview } from "@/lib/analytics/reports";
 import { canViewReports } from "@/lib/auth/roles";
+import { getReportsOverview } from "@/services/server/reports";
 import { ReportsView } from "./reports-view";
 
 export default async function ReportsPage() {
@@ -21,8 +21,10 @@ export default async function ReportsPage() {
     );
   }
 
-  const data = await getReportsOverview(organizationId, role);
-  if (!data) {
+  try {
+    const data = await getReportsOverview({ organizationId, role });
+    return <ReportsView data={data} />;
+  } catch {
     return (
       <AccessDenied
         title="Reportes"
@@ -30,6 +32,4 @@ export default async function ReportsPage() {
       />
     );
   }
-
-  return <ReportsView data={data} />;
 }

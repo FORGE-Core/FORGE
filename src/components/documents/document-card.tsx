@@ -20,6 +20,8 @@ import { InclusionIssuesList } from "@/components/alae/inclusion-issues-list";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { DocumentItem } from "./document-list";
 import { cn } from "@/lib/utils";
+import { documentsClient } from "@/services/client";
+import { ApiClientError } from "@/services/client/http";
 
 function formatSize(bytes: number | null) {
   if (!bytes) return "—";
@@ -83,12 +85,7 @@ export function DocumentCard({
     setDownloading(true);
     setError(null);
     try {
-      const res = await fetch(fileUrl);
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error ?? "No se pudo descargar");
-      }
-      const blob = await res.blob();
+      const blob = await documentsClient.downloadFile(doc.id);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -96,7 +93,11 @@ export function DocumentCard({
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al descargar");
+      setError(
+        err instanceof ApiClientError || err instanceof Error
+          ? err.message
+          : "Error al descargar"
+      );
     } finally {
       setDownloading(false);
     }
@@ -106,11 +107,7 @@ export function DocumentCard({
     setReprocessing(true);
     setError(null);
     try {
-      const res = await fetch(`/api/documents/${doc.id}/reprocess`, {
-        method: "POST",
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Error al reprocesar");
+      await documentsClient.reprocess(doc.id);
       onRefresh?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al reprocesar");
@@ -123,11 +120,7 @@ export function DocumentCard({
     setGenerating(true);
     setError(null);
     try {
-      const res = await fetch(`/api/documents/${doc.id}/generate`, {
-        method: "POST",
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Error al generar");
+      await documentsClient.generate(doc.id);
       onRefresh?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al generar contenido");
@@ -140,9 +133,7 @@ export function DocumentCard({
     setDeleting(true);
     setError(null);
     try {
-      const res = await fetch(`/api/documents/${doc.id}`, { method: "DELETE" });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error ?? "No se pudo eliminar");
+      await documentsClient.delete(doc.id);
       onDeleted();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al eliminar");

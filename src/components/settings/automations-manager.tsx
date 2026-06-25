@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { Loader2, Plus, Trash2, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { automationsClient } from "@/services/client";
+import { ApiClientError } from "@/services/client/http";
 
 type Automation = {
   id: string;
@@ -30,9 +32,8 @@ export function AutomationsManager() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/automations");
-      const data = await res.json();
-      if (res.ok) setItems(data.automations ?? []);
+      const data = await automationsClient.list();
+      setItems((data.automations ?? []) as Automation[]);
     } finally {
       setLoading(false);
     }
@@ -48,40 +49,29 @@ export function AutomationsManager() {
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch("/api/automations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name.trim(),
-          trigger,
-          config: { webhook: true },
-        }),
+      await automationsClient.create({
+        name: name.trim(),
+        trigger,
+        config: { webhook: true },
       });
-      const data = await res.json();
-      if (res.ok) {
-        setName("");
-        load();
-      } else {
-        setError(data.error ?? "No se pudo crear la automatización");
-      }
-    } catch {
-      setError("Error de conexión");
+      setName("");
+      load();
+    } catch (err) {
+      setError(
+        err instanceof ApiClientError ? err.message : "Error de conexión"
+      );
     } finally {
       setSaving(false);
     }
   }
 
   async function toggleActive(id: string, isActive: boolean) {
-    await fetch(`/api/automations/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ isActive: !isActive }),
-    });
+    await automationsClient.update(id, { isActive: !isActive });
     load();
   }
 
   async function remove(id: string) {
-    await fetch(`/api/automations/${id}`, { method: "DELETE" });
+    await automationsClient.delete(id);
     load();
   }
 

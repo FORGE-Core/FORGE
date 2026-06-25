@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { alaeClient } from "@/services/client";
 
 export function InclusionBulkAuditButton() {
   const router = useRouter();
@@ -16,10 +17,8 @@ export function InclusionBulkAuditButton() {
       onClick={async () => {
         setAuditing(true);
         try {
-          const res = await fetch("/api/alae/inclusion-audit/bulk", {
-            method: "POST",
-          });
-          if (res.ok) router.refresh();
+          await alaeClient.bulkInclusionAudit();
+          router.refresh();
         } finally {
           setAuditing(false);
         }

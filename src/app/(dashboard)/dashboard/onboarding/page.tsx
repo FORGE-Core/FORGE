@@ -14,6 +14,9 @@ import { FeedbackBanner } from "@/components/shared/feedback-banner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DocumentUploadZone } from "@/components/documents/document-upload-zone";
+import { onboardingClient, organizationClient } from "@/services/client";
+import { ApiClientError } from "@/services/client/http";
+import { writeOnboardingCache } from "@/lib/onboarding/client-cache";
 
 const steps = [
   {
@@ -56,12 +59,7 @@ export default function OnboardingPage() {
   const loadStatus = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/onboarding/status");
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? "No se pudo cargar el estado");
-        return;
-      }
+      const data = await onboardingClient.getStatus();
       setStatus(data);
       if (data.completed) {
         router.replace("/dashboard");
@@ -70,8 +68,10 @@ export default function OnboardingPage() {
       if (!data.steps.documents) setStep(1);
       else if (!data.steps.team) setStep(2);
       else if (!data.steps.chat) setStep(3);
-    } catch {
-      setError("Error de conexión");
+    } catch (err) {
+      setError(
+        err instanceof ApiClientError ? err.message : "Error de conexión"
+      );
     } finally {
       setLoading(false);
     }
@@ -85,22 +85,17 @@ export default function OnboardingPage() {
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch("/api/organization", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          notifications: { onboardingCompleted: true },
-        }),
+      await organizationClient.update({
+        notifications: { onboardingCompleted: true },
       });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? "No se pudo finalizar el onboarding");
-        return;
-      }
+      writeOnboardingCache("complete");
       router.push("/dashboard");
-      router.refresh();
-    } catch {
-      setError("Error de conexión al guardar");
+    } catch (err) {
+      setError(
+        err instanceof ApiClientError
+          ? err.message
+          : "No se pudo finalizar el onboarding"
+      );
     } finally {
       setSaving(false);
     }

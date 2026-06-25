@@ -1,18 +1,15 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
-import { assertAdminSession } from "@/lib/auth/roles";
 import { db } from "@/lib/db";
+import { requireAdminApi } from "@/lib/api/tenant-route";
 import type { AutomationTrigger } from "@prisma/client";
 
 export async function GET() {
   try {
-    const check = await assertAdminSession(await auth());
-    if (!check.ok) {
-      return NextResponse.json({ error: check.error }, { status: check.status });
-    }
+    const tenant = await requireAdminApi();
+    if (!tenant.ok) return tenant.response;
 
     const automations = await db.automation.findMany({
-      where: { organizationId: check.session.user.organizationId! },
+      where: { organizationId: tenant.ctx.organizationId },
       orderBy: { createdAt: "desc" },
     });
 
@@ -25,10 +22,8 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const check = await assertAdminSession(await auth());
-    if (!check.ok) {
-      return NextResponse.json({ error: check.error }, { status: check.status });
-    }
+    const tenant = await requireAdminApi();
+    if (!tenant.ok) return tenant.response;
 
     const body = await req.json();
     const { name, trigger, config, isActive } = body;
@@ -42,7 +37,7 @@ export async function POST(req: Request) {
 
     const automation = await db.automation.create({
       data: {
-        organizationId: check.session.user.organizationId!,
+        organizationId: tenant.ctx.organizationId,
         name: name.trim(),
         trigger: trigger as AutomationTrigger,
         config: config ?? {},

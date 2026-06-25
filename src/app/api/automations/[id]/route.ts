@@ -1,19 +1,16 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
-import { assertAdminSession } from "@/lib/auth/roles";
 import { db } from "@/lib/db";
+import { requireAdminApi } from "@/lib/api/tenant-route";
 
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const check = await assertAdminSession(await auth());
-    if (!check.ok) {
-      return NextResponse.json({ error: check.error }, { status: check.status });
-    }
+    const tenant = await requireAdminApi();
+    if (!tenant.ok) return tenant.response;
 
-    const organizationId = check.session.user.organizationId!;
+    const organizationId = tenant.ctx.organizationId;
     const { id } = await params;
     const body = await req.json();
 
@@ -46,12 +43,10 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const check = await assertAdminSession(await auth());
-    if (!check.ok) {
-      return NextResponse.json({ error: check.error }, { status: check.status });
-    }
+    const tenant = await requireAdminApi();
+    if (!tenant.ok) return tenant.response;
 
-    const organizationId = check.session.user.organizationId!;
+    const organizationId = tenant.ctx.organizationId;
     const { id } = await params;
 
     const existing = await db.automation.findFirst({

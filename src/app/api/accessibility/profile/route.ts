@@ -1,21 +1,18 @@
-import { auth } from "@/auth";
 import {
   getOrCreateAccessibilityProfile,
   serializeAccessibilityProfile,
   updateAccessibilityProfile,
 } from "@/lib/alae/accessibility-profile";
 import { logAccessibilityEvent } from "@/lib/alae/events";
+import { requireTenantApi } from "@/lib/api/tenant-route";
 import type { LearningModality, LearningPace } from "@prisma/client";
 
 export async function GET() {
   try {
-    const session = await auth();
-    const userId = session?.user?.id;
-    const organizationId = session?.user?.organizationId;
-    if (!userId || !organizationId) {
-      return Response.json({ error: "No autorizado" }, { status: 401 });
-    }
+    const tenant = await requireTenantApi();
+    if (!tenant.ok) return tenant.response;
 
+    const { userId, organizationId } = tenant.ctx;
     const profile = await getOrCreateAccessibilityProfile(userId, organizationId);
     return Response.json({ profile: serializeAccessibilityProfile(profile) });
   } catch (error) {
@@ -29,12 +26,10 @@ export async function GET() {
 
 export async function PATCH(req: Request) {
   try {
-    const session = await auth();
-    const userId = session?.user?.id;
-    const organizationId = session?.user?.organizationId;
-    if (!userId || !organizationId) {
-      return Response.json({ error: "No autorizado" }, { status: 401 });
-    }
+    const tenant = await requireTenantApi();
+    if (!tenant.ok) return tenant.response;
+
+    const { userId, organizationId } = tenant.ctx;
 
     let body: Record<string, unknown>;
     try {

@@ -2,7 +2,6 @@
 
 import { use, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useSession } from "next-auth/react";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { FeedbackBanner } from "@/components/shared/feedback-banner";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import type { ModuleCardData } from "@/components/modules/module-card";
+import { usersClient } from "@/services/client";
+import { ApiClientError } from "@/services/client/http";
+import { useTenant, useTenantPermissions } from "@/providers/tenant-provider";
 
 type MemberDetail = {
   user: {
@@ -41,8 +43,8 @@ export default function TeamMemberPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const { data: session } = useSession();
-  const isAdmin = session?.user?.role === "ADMIN";
+  const { userId } = useTenant();
+  const { isAdmin } = useTenantPermissions();
 
   const [data, setData] = useState<MemberDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -55,18 +57,15 @@ export default function TeamMemberPage({
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/users/${id}`);
-      const json = await res.json();
-      if (!res.ok) {
-        setError(json.error ?? "Sin acceso");
-        return;
-      }
+      const json = (await usersClient.get(id)) as MemberDetail;
       setData(json);
       setRole(json.user.role);
       setStatus(json.user.status);
       setError(null);
-    } catch {
-      setError("Error de conexión");
+    } catch (err) {
+      setError(
+        err instanceof ApiClientError ? err.message : "Error de conexión"
+      );
     } finally {
       setLoading(false);
     }
@@ -81,20 +80,13 @@ export default function TeamMemberPage({
     setSaving(true);
     setSaveMessage(null);
     try {
-      const res = await fetch(`/api/users/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role, status }),
-      });
-      const json = await res.json();
-      if (!res.ok) {
-        setSaveMessage(json.error ?? "No se pudo actualizar");
-        return;
-      }
+      await usersClient.update(id, { role, status });
       setSaveMessage("Cambios guardados");
       await load();
-    } catch {
-      setSaveMessage("Error de conexión");
+    } catch (err) {
+      setSaveMessage(
+        err instanceof ApiClientError ? err.message : "Error de conexión"
+      );
     } finally {
       setSaving(false);
     }
@@ -145,7 +137,7 @@ export default function TeamMemberPage({
         </div>
       </div>
 
-      {isAdmin && data.user.id !== session?.user?.id && (
+      {isAdmin && data.user.id !== userId && (
         <Card>
           <CardHeader>
             <CardTitle>Gestión de acceso</CardTitle>

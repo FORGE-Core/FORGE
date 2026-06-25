@@ -1,48 +1,16 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
-import { db } from "@/lib/db";
+import { serviceErrorResponse } from "@/lib/api/service-response";
+import { requireTenantApi } from "@/lib/api/tenant-route";
+import { listConversations } from "@/services/server/chat";
 
 export async function GET() {
   try {
-    const session = await auth();
-    const organizationId = session?.user?.organizationId;
-    const userId = session?.user?.id;
+    const tenant = await requireTenantApi();
+    if (!tenant.ok) return tenant.response;
 
-    if (!organizationId || !userId) {
-      return NextResponse.json(
-        { error: "Debes iniciar sesión" },
-        { status: 401 }
-      );
-    }
-
-    const conversations = await db.conversation.findMany({
-      where: { organizationId, userId },
-      orderBy: { updatedAt: "desc" },
-      take: 30,
-      include: {
-        messages: {
-          orderBy: { createdAt: "desc" },
-          take: 1,
-          select: { content: true, role: true, createdAt: true },
-        },
-        _count: { select: { messages: true } },
-      },
-    });
-
-    return NextResponse.json({
-      conversations: conversations.map((c) => ({
-        id: c.id,
-        title: c.title ?? "Conversación",
-        updatedAt: c.updatedAt,
-        messageCount: c._count.messages,
-        preview: c.messages[0]?.content?.slice(0, 80) ?? "",
-      })),
-    });
+    const conversations = await listConversations(tenant.ctx);
+    return NextResponse.json({ conversations });
   } catch (error) {
-    console.error("[conversations GET]", error);
-    return NextResponse.json(
-      { error: "No se pudo cargar el historial" },
-      { status: 500 }
-    );
+    return serviceErrorResponse(error);
   }
 }

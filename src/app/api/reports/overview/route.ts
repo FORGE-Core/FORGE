@@ -1,32 +1,25 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
-import { getReportsOverview } from "@/lib/analytics/reports";
 import { canViewReports } from "@/lib/auth/roles";
+import { serviceErrorResponse } from "@/lib/api/service-response";
+import { buildOrganizationContext, requireTenantApi } from "@/lib/api/tenant-route";
+import { getReportsOverview } from "@/services/server/reports";
 
 export async function GET() {
   try {
-    const session = await auth();
-    const organizationId = session?.user?.organizationId;
-    const role = session?.user?.role;
+    const tenant = await requireTenantApi();
+    if (!tenant.ok) return tenant.response;
 
-    if (!organizationId) {
-      return NextResponse.json({ error: "Debes iniciar sesión" }, { status: 401 });
-    }
-
-    if (!canViewReports(role)) {
+    const orgCtx = buildOrganizationContext(tenant.session);
+    if (!canViewReports(orgCtx.role)) {
       return NextResponse.json(
         { error: "No tienes permiso para ver reportes" },
         { status: 403 }
       );
     }
 
-    const data = await getReportsOverview(organizationId, role);
+    const data = await getReportsOverview(orgCtx);
     return NextResponse.json(data);
   } catch (error) {
-    console.error("[reports/overview GET]", error);
-    return NextResponse.json(
-      { error: "No se pudieron cargar los reportes" },
-      { status: 500 }
-    );
+    return serviceErrorResponse(error);
   }
 }

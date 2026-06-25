@@ -25,6 +25,8 @@ import { InclusionScoreCard } from "@/components/alae/inclusion-score-card";
 import { ModuleVideoManager } from "@/components/modules/module-video-manager";
 import { ModuleVideoPlayer } from "@/components/modules/module-video-player";
 import { cn } from "@/lib/utils";
+import { alaeClient, trainingClient } from "@/services/client";
+import { ApiClientError } from "@/services/client/http";
 
 type LessonItem = {
   id: string;
@@ -71,17 +73,16 @@ export default function ModuleDetailPage({
   const loadModule = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/training-modules/${slug}`);
-      if (res.status === 404) {
+      const data = await trainingClient.getModule(slug);
+      if (data.module) {
+        setTrainingModule(data.module as ModuleDetail);
+        if ((data.module as ModuleDetail).hasVideo) setShowVideo(true);
+      }
+    } catch (err) {
+      if (err instanceof ApiClientError && err.status === 404) {
         setNotFoundState(true);
         return;
       }
-      const data = await res.json();
-      if (res.ok && data.module) {
-        setTrainingModule(data.module);
-        if (data.module.hasVideo) setShowVideo(true);
-      }
-    } catch {
       setNotFoundState(true);
     } finally {
       setLoading(false);
@@ -122,13 +123,9 @@ export default function ModuleDetailPage({
                 title={trainingModule.title}
                 captionText={trainingModule.description}
                 onPlay={() => {
-                  void fetch("/api/alae/modality", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                      modality: "LISTENING",
-                      source: "module-video",
-                    }),
+                  void alaeClient.recordModality({
+                    modality: "LISTENING",
+                    source: "module-video",
                   });
                 }}
               />

@@ -1,40 +1,27 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
-import { getProfileData } from "@/lib/analytics/profile";
-import { db } from "@/lib/db";
+import { serviceErrorResponse } from "@/lib/api/service-response";
+import { requireTenantApi } from "@/lib/api/tenant-route";
+import { getProfileData } from "@/services/server/profile";
+import { getOrganizationName } from "@/services/server/organization";
 
 export async function GET() {
   try {
-    const session = await auth();
-    const organizationId = session?.user?.organizationId;
-    const userId = session?.user?.id;
+    const tenant = await requireTenantApi();
+    if (!tenant.ok) return tenant.response;
 
-    if (!organizationId || !userId) {
-      return NextResponse.json({ error: "Debes iniciar sesión" }, { status: 401 });
-    }
-
-    const org = await db.organization.findUnique({
-      where: { id: organizationId },
-      select: { name: true },
-    });
-
+    const orgName = await getOrganizationName(tenant.ctx.organizationId);
     const data = await getProfileData(
-      organizationId,
-      userId,
+      tenant.ctx,
       {
-        name: session.user.name ?? null,
-        email: session.user.email ?? "",
-        role: session.user.role ?? "EMPLOYEE",
+        name: tenant.session.user.name ?? null,
+        email: tenant.session.user.email ?? "",
+        role: tenant.session.user.role ?? "EMPLOYEE",
       },
-      org?.name ?? "Tu empresa"
+      orgName
     );
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error("[profile GET]", error);
-    return NextResponse.json(
-      { error: "No se pudo cargar el perfil" },
-      { status: 500 }
-    );
+    return serviceErrorResponse(error);
   }
 }

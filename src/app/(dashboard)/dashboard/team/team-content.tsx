@@ -8,13 +8,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { TeamMember } from "@/lib/team/members";
+import { usersClient } from "@/services/client";
+import { ApiClientError } from "@/services/client/http";
+import { useTenantPermissions } from "@/providers/tenant-provider";
 
 type TeamContentProps = {
   initialUsers: TeamMember[];
-  isAdmin: boolean;
 };
 
-export function TeamContent({ initialUsers, isAdmin }: TeamContentProps) {
+export function TeamContent({ initialUsers }: TeamContentProps) {
+  const { isAdmin } = useTenantPermissions();
   const [users, setUsers] = useState(initialUsers);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -25,9 +28,8 @@ export function TeamContent({ initialUsers, isAdmin }: TeamContentProps) {
   const [approvingId, setApprovingId] = useState<string | null>(null);
 
   async function refreshUsers() {
-    const res = await fetch("/api/users");
-    const data = await res.json();
-    if (res.ok) setUsers(data.users ?? []);
+    const data = await usersClient.list();
+    setUsers((data.users ?? []) as TeamMember[]);
   }
 
   async function handleInvite(e: React.FormEvent) {
@@ -36,20 +38,16 @@ export function TeamContent({ initialUsers, isAdmin }: TeamContentProps) {
     setError(null);
     setSuccess(null);
     try {
-      const res = await fetch("/api/users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, name, password, role: "EMPLOYEE" }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Error al crear");
+      await usersClient.create({ email, name, password, role: "EMPLOYEE" });
       setEmail("");
       setName("");
       setPassword("");
       setSuccess("Usuario creado correctamente");
       await refreshUsers();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error");
+      setError(
+        err instanceof ApiClientError ? err.message : "Error"
+      );
     } finally {
       setCreating(false);
     }
@@ -60,17 +58,13 @@ export function TeamContent({ initialUsers, isAdmin }: TeamContentProps) {
     setError(null);
     setSuccess(null);
     try {
-      const res = await fetch(`/api/users/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "ACTIVE" }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "No se pudo aprobar");
+      await usersClient.update(id, { status: "ACTIVE" });
       setSuccess("Usuario aprobado");
       await refreshUsers();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al aprobar");
+      setError(
+        err instanceof ApiClientError ? err.message : "Error al aprobar"
+      );
     } finally {
       setApprovingId(null);
     }

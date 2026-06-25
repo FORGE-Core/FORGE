@@ -21,6 +21,7 @@ import { useVoiceInput } from "@/hooks/use-voice-input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { chatClient } from "@/services/client";
 
 interface Message {
   id: string;
@@ -70,9 +71,8 @@ export function AIChat() {
 
   const loadHistory = useCallback(async () => {
     try {
-      const res = await fetch("/api/conversations");
-      const data = await res.json();
-      if (res.ok) setHistory(data.conversations ?? []);
+      const data = await chatClient.listConversations();
+      setHistory((data.conversations ?? []) as ConversationPreview[]);
     } catch {
       /* historial opcional */
     }
@@ -80,12 +80,9 @@ export function AIChat() {
 
   const loadSuggestions = useCallback(async () => {
     try {
-      const res = await fetch("/api/chat/suggestions");
-      const data = await res.json();
-      if (res.ok) {
-        setSuggestions(data.suggestions ?? []);
-        setProcesses(data.processes ?? []);
-      }
+      const data = await chatClient.getSuggestions();
+      setSuggestions(data.suggestions ?? []);
+      setProcesses(data.processes ?? []);
     } catch {
       /* sugerencias por defecto en UI */
     }
@@ -110,13 +107,9 @@ export function AIChat() {
     ]);
 
     try {
-      const res = await fetch("/api/chat/stream", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: userMsg.content,
-          conversationId,
-        }),
+      const res = await chatClient.streamMessage({
+        message: userMsg.content,
+        conversationId,
       });
 
       if (!res.ok || !res.body) {
@@ -216,9 +209,8 @@ export function AIChat() {
 
   const loadConversation = useCallback(async (id: string) => {
     try {
-      const res = await fetch(`/api/conversations/${id}`);
-      const data = await res.json();
-      if (!res.ok || !data.conversation) return;
+      const data = await chatClient.getConversation(id);
+      if (!data.conversation) return;
       setConversationId(id);
       setMessages(
         data.conversation.messages.map(

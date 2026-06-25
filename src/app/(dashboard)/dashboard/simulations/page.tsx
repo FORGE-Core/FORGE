@@ -10,6 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { FeedbackBanner } from "@/components/shared/feedback-banner";
 import { cn } from "@/lib/utils";
+import { activitiesClient } from "@/services/client";
+import { ApiClientError } from "@/services/client/http";
 
 type Simulation = {
   id: string;
@@ -37,19 +39,15 @@ export default function SimulationsPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/simulations?index=${index}`);
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? "No se pudo cargar");
-        setSimulation(null);
-        return;
-      }
-      setSimulation(data.simulation ?? null);
+      const data = await activitiesClient.getSimulation(index);
+      setSimulation((data.simulation ?? null) as Simulation | null);
       setSelected(null);
       setFinished(false);
       setSubmitError(null);
-    } catch {
-      setError("Error de conexión");
+    } catch (err) {
+      setError(
+        err instanceof ApiClientError ? err.message : "Error de conexión"
+      );
       setSimulation(null);
     } finally {
       setLoading(false);
@@ -68,19 +66,14 @@ export default function SimulationsPage() {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const res = await fetch(`/api/simulations/${simulation.id}/attempt`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ selectedId: selected }),
+      await activitiesClient.submitSimulationAttempt(simulation.id, {
+        selectedId: selected,
       });
-      const data = await res.json();
-      if (!res.ok) {
-        setSubmitError(data.error ?? "No se pudo guardar el intento");
-        return;
-      }
       setFinished(true);
-    } catch {
-      setSubmitError("Error de conexión al guardar");
+    } catch (err) {
+      setSubmitError(
+        err instanceof ApiClientError ? err.message : "Error de conexión al guardar"
+      );
     } finally {
       setSubmitting(false);
     }

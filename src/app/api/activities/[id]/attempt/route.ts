@@ -1,63 +1,35 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
-import { submitActivityAttempt } from "@/lib/activities/quiz";
 import { getActivityExplanation } from "@/lib/activities/types";
-import {
-  recordModalityUse,
-  syncSupportLevelFromActivity,
-} from "@/lib/alae/learning-profile";
-import { logLearningEvent } from "@/lib/learning/events";
+import { serviceErrorResponse } from "@/lib/api/service-response";
+import { requireTenantApi } from "@/lib/api/tenant-route";
+import { submitActivityAttempt } from "@/services/server/training";
 
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    const organizationId = session?.user?.organizationId;
-    const userId = session?.user?.id;
+    const tenant = await requireTenantApi();
+    if (!tenant.ok) return tenant.response;
+
     const { id } = await params;
-
-    if (!organizationId || !userId) {
-      return NextResponse.json({ error: "Debes iniciar sesión" }, { status: 401 });
-    }
-
     const body = await req.json();
-    const selectedId = body.selectedId as string | undefined;
-    const order = body.order as string[] | undefined;
 
-    if (!selectedId && (!order || order.length === 0)) {
-      return NextResponse.json({ error: "Respuesta requerida" }, { status: 400 });
-    }
-
-    const { score, passed, activity } = await submitActivityAttempt({
-      userId,
-      organizationId,
+    const { attempt, score, passed, activity } = await submitActivityAttempt({
+      userId: tenant.ctx.userId,
+      organizationId: tenant.ctx.organizationId,
       activityId: id,
-      answers: { selectedId, order },
+      answers: body.answers ?? body,
       timeSecs: body.timeSecs,
     });
 
-    await Promise.all([
-      logLearningEvent({
-        organizationId,
-        userId,
-        eventType: passed ? "ACTIVITY_PASSED" : "ACTIVITY_FAILED",
-        payload: { activityId: id, score, moduleId: activity.moduleId },
-      }),
-      recordModalityUse(userId, organizationId, "PRACTICE"),
-      syncSupportLevelFromActivity(userId, organizationId),
-    ]);
-
     return NextResponse.json({
+      attemptId: attempt.id,
       score,
       passed,
       explanation: getActivityExplanation(activity.type, activity.content),
     });
   } catch (error) {
-    console.error("[activities attempt POST]", error);
-    const msg =
-      error instanceof Error ? error.message : "Error al registrar intento";
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return serviceErrorResponse(error);
   }
 }

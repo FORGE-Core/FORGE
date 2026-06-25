@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
 import {
   EMPLOYEE_VISIBLE_DOCUMENT_TYPES,
   isAdmin,
 } from "@/lib/auth/roles";
 import { readStoredFile, storedFileExists } from "@/lib/document-storage";
 import { getOrganizationDocument } from "@/lib/documents";
+import { requireTenantApi } from "@/lib/api/tenant-route";
 
 export const runtime = "nodejs";
 
@@ -25,13 +25,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    const organizationId = session?.user?.organizationId;
+    const tenant = await requireTenantApi();
+    if (!tenant.ok) return tenant.response;
 
-    if (!organizationId) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
-
+    const { organizationId, role } = tenant.ctx;
     const { id } = await params;
     const document = await getOrganizationDocument(id, organizationId);
 
@@ -42,7 +39,6 @@ export async function GET(
       );
     }
 
-    const role = session.user.role;
     if (
       !isAdmin(role) &&
       !EMPLOYEE_VISIBLE_DOCUMENT_TYPES.includes(

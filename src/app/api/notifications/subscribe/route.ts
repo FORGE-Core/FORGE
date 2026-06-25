@@ -1,17 +1,14 @@
-import { auth } from "@/auth";
 import {
   removePushSubscription,
   savePushSubscription,
 } from "@/lib/notifications/push";
+import { requireTenantApi } from "@/lib/api/tenant-route";
 
 export async function POST(req: Request) {
-  const session = await auth();
-  const userId = session?.user?.id;
-  const organizationId = session?.user?.organizationId;
+  const tenant = await requireTenantApi();
+  if (!tenant.ok) return tenant.response;
 
-  if (!userId || !organizationId) {
-    return Response.json({ error: "No autorizado" }, { status: 401 });
-  }
+  const { userId, organizationId } = tenant.ctx;
 
   let body: { subscription?: PushSubscriptionJSON; action?: string };
   try {
