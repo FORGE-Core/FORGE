@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { VoiceDictationInput } from "@/components/alae/voice-dictation-input";
 import { registerAction } from "@/server/actions/auth";
 import { Button } from "@/components/ui/button";
 import {
@@ -78,44 +77,51 @@ export function RegisterForm() {
               {error}
             </p>
           )}
-          <VoiceDictationInput
-            id="companyName"
-            name="companyName"
-            label="Nombre de la empresa"
-            value={companyName}
-            onChange={setCompanyName}
-            placeholder="Nombre de la empresa"
-            required
-            alwaysShowVoice
-            autoStartOnFocus
-          />
-          <VoiceDictationInput
-            id="register-email"
-            name="email"
-            label="Correo electrónico"
-            type="email"
-            value={email}
-            onChange={setEmail}
-            autoComplete="email"
-            placeholder="Tu correo corporativo"
-            required
-            alwaysShowVoice
-            autoStartOnFocus
-          />
-          <VoiceDictationInput
-            id="register-password"
-            name="password"
-            label="Contraseña"
-            type="password"
-            value={password}
-            onChange={setPassword}
-            autoComplete="new-password"
-            placeholder="Contraseña (mín. 6 caracteres)"
-            required
-            minLength={6}
-            alwaysShowVoice
-            autoStartOnFocus
-          />
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="companyName" className="text-xs font-semibold text-brand-muted-gray">
+              Nombre de la empresa
+            </label>
+            <input
+              id="companyName"
+              type="text"
+              value={companyName}
+              onChange={(e) => setCompanyName(e.target.value)}
+              placeholder="Nombre de la empresa"
+              className="rounded-xl border border-black/10 bg-brand-light-bg px-3.5 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-cobalt/30"
+              required
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="register-email" className="text-xs font-semibold text-brand-muted-gray">
+              Correo electrónico
+            </label>
+            <input
+              id="register-email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+              placeholder="Tu correo corporativo"
+              className="rounded-xl border border-black/10 bg-brand-light-bg px-3.5 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-cobalt/30"
+              required
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="register-password" className="text-xs font-semibold text-brand-muted-gray">
+              Contraseña
+            </label>
+            <input
+              id="register-password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="new-password"
+              placeholder="Contraseña (mín. 6 caracteres)"
+              className="rounded-xl border border-black/10 bg-brand-light-bg px-3.5 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-cobalt/30"
+              required
+              minLength={6}
+            />
+          </div>
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Creando cuenta…" : "Crear cuenta"}
           </Button>
