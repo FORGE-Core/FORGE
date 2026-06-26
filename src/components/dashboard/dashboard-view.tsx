@@ -12,7 +12,7 @@ import { AlaeDashboardCard } from "@/components/alae/alae-dashboard-card";
 import { AIRecommendations } from "@/components/dashboard/ai-recommendations";
 import { MetricCard } from "@/components/dashboard/metric-card";
 import { WelcomeHero } from "@/components/dashboard/welcome-hero";
-import { ModuleCard, type ModuleCardData } from "@/components/modules/module-card";
+import { type ModuleCardData } from "@/components/modules/module-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -186,20 +186,6 @@ export function DashboardView({ data }: DashboardViewProps) {
             })}
           </CardContent>
         </Card>
-      </div>
-
-      <div>
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="font-heading text-xl font-bold">Módulos destacados</h2>
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/modules">Explorar catálogo</Link>
-          </Button>
-        </div>
-        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-          {data.highlightModules.map((m, i) => (
-            <ModuleCard key={m.slug} module={m} index={i} />
-          ))}
-        </div>
       </div>
     </div>
   );

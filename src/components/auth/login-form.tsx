@@ -82,16 +82,6 @@ export function LoginForm({ googleEnabled = false }: LoginFormProps) {
     router.refresh();
   }
 
-  if (status === "loading" || (status === "authenticated" && session?.user)) {
-    return (
-      <Card className="w-full max-w-md">
-        <CardContent className="py-10 text-center text-sm text-brand-muted-gray">
-          {status === "authenticated" ? "Redirigiendo al panel…" : "Comprobando sesión…"}
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <Card className="w-full max-w-md">
       <CardHeader className="text-center">
