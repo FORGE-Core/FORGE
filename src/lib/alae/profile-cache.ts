@@ -2,6 +2,8 @@ import type { AccessibilityProfileData } from "./types";
 
 const STORAGE_KEY = "alae-accessibility-profile";
 
+export const ALAE_PROFILE_STORAGE_KEY = STORAGE_KEY;
+
 export function readCachedProfile(): AccessibilityProfileData | null {
   if (typeof window === "undefined") return null;
   try {

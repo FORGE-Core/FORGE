@@ -25,6 +25,51 @@ function progressStatus(percent: number): ModuleCardData["status"] {
   return "pending";
 }
 
+type ModuleRow = {
+  id: string;
+  slug: string | null;
+  title: string;
+  description: string | null;
+  audience: string | null;
+  estimatedMins: number | null;
+  orderIndex: number;
+  documents: { id: string }[];
+  progress?: { percentComplete: number }[];
+};
+
+function mapModuleRow(
+  mod: ModuleRow,
+  index: number,
+  videoId: string | null,
+  userId?: string
+): OrganizationModule {
+  const userProgress =
+    userId && Array.isArray(mod.progress) ? mod.progress[0] : undefined;
+  const percent = Math.round(userProgress?.percentComplete ?? 0);
+
+  const category =
+    (mod.audience?.includes("Gerencia")
+      ? "Gerencia"
+      : mod.audience?.split(",")[0]?.trim()) || "Capacitación";
+
+  return {
+    id: mod.id,
+    slug: mod.slug ?? mod.id,
+    title: mod.title,
+    category,
+    level: mod.audience ?? "Operativo",
+    duration: mod.estimatedMins ? formatDuration(mod.estimatedMins) : "—",
+    status: progressStatus(percent),
+    progress: percent,
+    gradient: GRADIENTS[index % GRADIENTS.length],
+    description: mod.description,
+    audience: mod.audience,
+    documentId: mod.documents[0]?.id ?? null,
+    videoId,
+    hasVideo: !!videoId,
+  };
+}
+
 export type OrganizationModule = ModuleCardData & {
   id: string;
   description: string | null;
@@ -76,34 +121,9 @@ export async function getOrganizationModules(
     }
   }
 
-  return modules.map((mod, index) => {
-    const userProgress =
-      userId && Array.isArray(mod.progress) ? mod.progress[0] : undefined;
-    const percent = Math.round(userProgress?.percentComplete ?? 0);
-    const videoId = videoByModuleId.get(mod.id) ?? null;
-
-    const category =
-      (mod.audience?.includes("Gerencia")
-        ? "Gerencia"
-        : mod.audience?.split(",")[0]?.trim()) || "Capacitación";
-
-    return {
-      id: mod.id,
-      slug: mod.slug ?? mod.id,
-      title: mod.title,
-      category,
-      level: mod.audience ?? "Operativo",
-      duration: mod.estimatedMins ? formatDuration(mod.estimatedMins) : "—",
-      status: progressStatus(percent),
-      progress: percent,
-      gradient: GRADIENTS[index % GRADIENTS.length],
-      description: mod.description,
-      audience: mod.audience,
-      documentId: mod.documents[0]?.id ?? null,
-      videoId,
-      hasVideo: !!videoId,
-    };
-  });
+  return modules.map((mod, index) =>
+    mapModuleRow(mod, index, videoByModuleId.get(mod.id) ?? null, userId)
+  );
 }
 
 export async function listModules(ctx: OrganizationContext & { userId?: string }) {
@@ -148,9 +168,24 @@ export async function getOrganizationModuleBySlug(
 
   if (!mod) return null;
 
-  const modules = await getOrganizationModules(organizationId, userId);
-  const card = modules.find((m) => m.slug === slug);
-  if (!card) return null;
+  const video = await db.document.findFirst({
+    where: {
+      organizationId,
+      moduleId: mod.id,
+      type: "VIDEO",
+      status: "READY",
+      fileUrl: { not: null },
+    },
+    orderBy: { updatedAt: "desc" },
+    select: { id: true },
+  });
+
+  const card = mapModuleRow(
+    mod,
+    mod.orderIndex,
+    video?.id ?? null,
+    userId
+  );
 
   return { module: mod, card };
 }

@@ -12,6 +12,7 @@ const ACTIVITY_TYPES = [
   "TRUE_FALSE",
   "ORDER_STEPS",
   "ERROR_DETECTION",
+  "CASE_STUDY",
 ] as const;
 
 function serializeActivity(
@@ -55,6 +56,31 @@ function serializeActivity(
     };
   }
 
+  if (activity.type === "CASE_STUDY") {
+    const content = activity.content as {
+      scenario?: string;
+      options?: {
+        id: string;
+        label: string;
+        text: string;
+        score: number;
+      }[];
+      aiAnalysis?: string;
+    };
+    return {
+      ...base,
+      scenario: content.scenario ?? "",
+      options: content.options?.map((o) => ({
+        id: o.id,
+        text: o.text,
+        correct: o.score >= 70,
+        label: o.label,
+        score: o.score,
+      })),
+      explanation: content.aiAnalysis ?? "",
+    };
+  }
+
   const quiz = parseQuizContent(activity.content);
   return {
     ...base,
@@ -83,34 +109,41 @@ export async function getActivityAtIndex(
     }
   }
 
-  const activities = await db.activity.findMany({
-    where: {
-      organizationId: ctx.organizationId,
-      ...(input.moduleId ? { moduleId: input.moduleId } : {}),
-      type: { in: [...ACTIVITY_TYPES] },
-    },
-    include: {
-      module: { select: { title: true, slug: true } },
-      attempts: {
-        where: { userId: ctx.userId },
-        orderBy: { createdAt: "desc" },
-        take: 1,
-      },
-    },
-    orderBy: { createdAt: "asc" },
-  });
+  const where = {
+    organizationId: ctx.organizationId,
+    ...(input.moduleId ? { moduleId: input.moduleId } : {}),
+    type: { in: [...ACTIVITY_TYPES] },
+  };
 
-  const activity = activities[index];
+  const [total, activities] = await Promise.all([
+    db.activity.count({ where }),
+    db.activity.findMany({
+      where,
+      include: {
+        module: { select: { title: true, slug: true } },
+        attempts: {
+          where: { userId: ctx.userId },
+          orderBy: { createdAt: "desc" },
+          take: 1,
+        },
+      },
+      orderBy: { createdAt: "asc" },
+      skip: index,
+      take: 1,
+    }),
+  ]);
+
+  const activity = activities[0];
   if (!activity) {
-    return { activity: null, total: activities.length };
+    return { activity: null, total };
   }
 
   return {
     activity: {
-      ...serializeActivity(activity, index, activities.length),
+      ...serializeActivity(activity, index, total),
       lastPassed: activity.attempts[0]?.passed ?? false,
     },
-    total: activities.length,
+    total,
   };
 }
 

@@ -1,25 +1,28 @@
 "use client";
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Suspense } from "react";
 import { SessionProvider } from "next-auth/react";
-import { useState } from "react";
+import { AccessibilityProvider } from "@/components/alae/accessibility-provider";
+import { AssistedReadingAutoEnable } from "@/components/alae/assisted-reading-auto-enable";
+import { AssistedReadingShortcut } from "@/components/alae/assisted-reading-shortcut";
+import { AssistedReadingToolbar } from "@/components/alae/assisted-reading-toolbar";
+import { RouteAnnouncer } from "@/components/alae/route-announcer";
+import { ScreenReaderLiveRegions } from "@/components/alae/screen-reader-live";
 import { PwaProvider } from "@/components/pwa/pwa-provider";
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  const [queryClient] = useState(
-    () =>
-      new QueryClient({
-        defaultOptions: {
-          queries: { staleTime: 60 * 1000, refetchOnWindowFocus: false },
-        },
-      })
-  );
-
   return (
-    <SessionProvider>
-      <QueryClientProvider client={queryClient}>
+    <SessionProvider refetchOnWindowFocus={false} refetchInterval={0}>
+      <AccessibilityProvider>
+        <ScreenReaderLiveRegions />
+        <RouteAnnouncer />
+        <AssistedReadingShortcut />
+        <Suspense fallback={null}>
+          <AssistedReadingAutoEnable />
+        </Suspense>
+        <AssistedReadingToolbar />
         <PwaProvider>{children}</PwaProvider>
-      </QueryClientProvider>
+      </AccessibilityProvider>
     </SessionProvider>
   );
 }

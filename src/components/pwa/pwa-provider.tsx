@@ -1,16 +1,6 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { useEffect } from "react";
-import { DeferredMount } from "@/components/shared/deferred-mount";
-
-const PwaInstallPrompt = dynamic(
-  () =>
-    import("./pwa-install-prompt").then((mod) => ({
-      default: mod.PwaInstallPrompt,
-    })),
-  { ssr: false }
-);
 
 export function PwaProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
@@ -24,12 +14,5 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
     navigator.serviceWorker.register("/sw.js").catch(() => {});
   }, []);
 
-  return (
-    <>
-      {children}
-      <DeferredMount delayMs={2000}>
-        <PwaInstallPrompt />
-      </DeferredMount>
-    </>
-  );
+  return <>{children}</>;
 }

@@ -69,6 +69,10 @@ export async function PATCH(req: Request) {
         typeof body.voiceInputEnabled === "boolean"
           ? body.voiceInputEnabled
           : undefined,
+      assistedReadingMode:
+        typeof body.assistedReadingMode === "boolean"
+          ? body.assistedReadingMode
+          : undefined,
       declaredNeeds:
         typeof body.declaredNeeds === "object" && body.declaredNeeds
           ? (body.declaredNeeds as object)

@@ -16,4 +16,17 @@ export const usersClient = {
   update(id: string, body: Record<string, unknown>) {
     return apiRequest(`/api/users/${id}`, { method: "PATCH", body });
   },
+
+  getAccessibility(id: string) {
+    return apiRequest<{ user: unknown; profile: unknown }>(
+      `/api/users/${id}/accessibility`
+    );
+  },
+
+  updateAccessibility(id: string, body: Record<string, unknown>) {
+    return apiRequest<{ user: unknown; profile: unknown }>(
+      `/api/users/${id}/accessibility`,
+      { method: "PATCH", body }
+    );
+  },
 };

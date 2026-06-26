@@ -18,6 +18,7 @@ export type AccessibilityProfileData = {
   wizardCompleted: boolean;
   voiceCommandsEnabled: boolean;
   voiceInputEnabled: boolean;
+  assistedReadingMode: boolean;
 };
 
 export type LearningProfileData = {

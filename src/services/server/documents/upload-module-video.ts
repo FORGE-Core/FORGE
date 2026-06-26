@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { deleteStoredFile, saveOrganizationFile } from "@/lib/document-storage";
+import { deleteStoredFile, saveOrganizationFile } from "@/lib/storage";
 
 const MAX_VIDEO_BYTES = 100 * 1024 * 1024;
 
@@ -64,7 +64,8 @@ export async function uploadModuleVideo({
       organizationId,
       existing.id,
       buffer,
-      ext
+      ext,
+      file.type || undefined
     );
 
     await db.document.update({
@@ -79,6 +80,9 @@ export async function uploadModuleVideo({
           mediaType: "video",
           moduleVideo: true,
           processedAt: new Date().toISOString(),
+          storageProvider: relativePath.startsWith("cloudinary://")
+            ? "cloudinary"
+            : "local",
         },
       },
     });
@@ -103,7 +107,8 @@ export async function uploadModuleVideo({
     organizationId,
     document.id,
     buffer,
-    ext
+    ext,
+    file.type || undefined
   );
 
   await db.document.update({
@@ -115,6 +120,9 @@ export async function uploadModuleVideo({
         mediaType: "video",
         moduleVideo: true,
         processedAt: new Date().toISOString(),
+        storageProvider: relativePath.startsWith("cloudinary://")
+          ? "cloudinary"
+          : "local",
       },
     },
   });
@@ -136,6 +144,8 @@ export async function getModuleVideo(organizationId: string, moduleId: string) {
       id: true,
       title: true,
       fileSize: true,
+      fileUrl: true,
+      mimeType: true,
       updatedAt: true,
     },
   });

@@ -9,7 +9,7 @@ import {
 import { onboardingClient } from "@/services/client";
 import { useTenant } from "@/providers/tenant-provider";
 
-const EXEMPT_PATHS = ["/dashboard/onboarding", "/dashboard/accessibility"];
+const EXEMPT_PATHS = ["/onboarding", "/profile"];
 
 export function OnboardingGate() {
   const pathname = usePathname();
@@ -28,11 +28,12 @@ export function OnboardingGate() {
     const cached = readOnboardingCache();
     if (cached === "complete") return;
     if (cached === "pending") {
-      router.replace("/dashboard/onboarding");
+      router.replace("/onboarding");
       return;
     }
 
     let cancelled = false;
+    let idleId: number | undefined;
 
     async function check() {
       try {
@@ -45,15 +46,30 @@ export function OnboardingGate() {
         }
 
         writeOnboardingCache("pending");
-        router.replace("/dashboard/onboarding");
+        router.replace("/onboarding");
       } catch {
         /* no bloquear navegación */
       }
     }
 
-    void check();
+    const run = () => {
+      if (cancelled) return;
+      void check();
+    };
+
+    if ("requestIdleCallback" in window) {
+      idleId = window.requestIdleCallback(run, { timeout: 2000 });
+    } else {
+      const timer = setTimeout(run, 300);
+      return () => {
+        cancelled = true;
+        clearTimeout(timer);
+      };
+    }
+
     return () => {
       cancelled = true;
+      if (idleId !== undefined) window.cancelIdleCallback(idleId);
     };
   }, [pathname, router, isAdmin]);
 

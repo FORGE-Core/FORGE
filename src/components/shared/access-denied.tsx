@@ -11,8 +11,8 @@ type AccessDeniedProps = {
 export function AccessDenied({
   title,
   description,
-  backHref = "/dashboard",
-  backLabel = "Volver al dashboard",
+  backHref = "/inicio",
+  backLabel = "Volver al inicio",
 }: AccessDeniedProps) {
   return (
     <div className="space-y-4 pb-8">

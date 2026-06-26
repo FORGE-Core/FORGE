@@ -4,7 +4,8 @@ import {
   isAdmin,
 } from "@/lib/auth/roles";
 import { getLatestInclusionScores } from "@/lib/alae/inclusion-scorer";
-import { deleteStoredFile, readStoredFile, saveOrganizationFile } from "@/lib/document-storage";
+import { deleteStoredFile, readStoredFile, saveOrganizationFile } from "@/lib/storage";
+import { buildDocumentDeliveryUrl } from "@/lib/storage/delivery-url";
 import { db } from "@/lib/db";
 import { logLearningEvent } from "@/lib/learning/events";
 import { generateLearningContentFromDocument } from "@/services/server/ai/generate-learning-content";
@@ -18,6 +19,7 @@ import {
 
 const MAX_PDF_BYTES = 15 * 1024 * 1024;
 const MAX_VIDEO_BYTES = 100 * 1024 * 1024;
+const MAX_IMAGE_BYTES = 12 * 1024 * 1024;
 
 const VIDEO_MIMES = new Set([
   "video/mp4",
@@ -38,6 +40,7 @@ export type OrganizationDocumentItem = {
   createdAt: string;
   fileUrl: string | null;
   hasFile: boolean;
+  deliveryUrl: string | null;
   inclusionScore: number | null;
   inclusionIssues: string[];
   inclusionRecommendations: string[];
@@ -47,6 +50,26 @@ function isPdf(file: File) {
   return (
     file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")
   );
+}
+
+function isImage(file: File) {
+  const name = file.name.toLowerCase();
+  return (
+    file.type.startsWith("image/") ||
+    name.endsWith(".jpg") ||
+    name.endsWith(".jpeg") ||
+    name.endsWith(".png") ||
+    name.endsWith(".webp") ||
+    name.endsWith(".gif")
+  );
+}
+
+function imageExtension(file: File): string {
+  const name = file.name.toLowerCase();
+  if (name.endsWith(".png")) return ".png";
+  if (name.endsWith(".webp")) return ".webp";
+  if (name.endsWith(".gif")) return ".gif";
+  return ".jpg";
 }
 
 function isVideo(file: File) {
@@ -121,6 +144,11 @@ export async function listDocuments(ctx: OrganizationContext) {
     createdAt: doc.createdAt.toISOString(),
     fileUrl: doc.fileUrl,
     hasFile: !!doc.fileUrl,
+    deliveryUrl: buildDocumentDeliveryUrl(doc.fileUrl, {
+      documentType: doc.type,
+      mimeType: doc.mimeType,
+      inline: true,
+    }),
     inclusionScore: inclusionScores.get(doc.id)?.score ?? null,
     inclusionIssues: inclusionScores.get(doc.id)?.issues ?? [],
     inclusionRecommendations:
@@ -141,15 +169,20 @@ export async function uploadDocument(
 ) {
   const pdf = isPdf(input.file);
   const video = isVideo(input.file);
+  const image = isImage(input.file);
 
-  if (!pdf && !video) {
+  if (!pdf && !video && !image) {
     throw new ServiceError(
       "VALIDATION",
-      "Formatos permitidos: PDF (.pdf) o video (.mp4, .webm, .mov)"
+      "Formatos permitidos: PDF, imagen (.jpg, .png, .webp) o video (.mp4, .webm, .mov)"
     );
   }
 
-  const maxBytes = pdf ? MAX_PDF_BYTES : MAX_VIDEO_BYTES;
+  const maxBytes = pdf
+    ? MAX_PDF_BYTES
+    : video
+      ? MAX_VIDEO_BYTES
+      : MAX_IMAGE_BYTES;
   if (input.file.size > maxBytes) {
     const limitMb = maxBytes / (1024 * 1024);
     throw new ServiceError(
@@ -163,7 +196,8 @@ export async function uploadDocument(
   }
 
   const buffer = Buffer.from(await input.file.arrayBuffer());
-  const ext = pdf ? ".pdf" : videoExtension(input.file);
+  const ext = pdf ? ".pdf" : video ? videoExtension(input.file) : imageExtension(input.file);
+  const docType = pdf ? "PDF" : video ? "VIDEO" : "IMAGE";
   const defaultTitle =
     input.file.name.replace(/\.[^.]+$/, "").trim() || "Sin título";
   const title = input.title?.trim() || defaultTitle;
@@ -172,9 +206,11 @@ export async function uploadDocument(
     data: {
       organizationId: ctx.organizationId,
       title,
-      type: pdf ? "PDF" : "VIDEO",
+      type: docType,
       status: "PROCESSING",
-      mimeType: input.file.type || (pdf ? "application/pdf" : "video/mp4"),
+      mimeType:
+        input.file.type ||
+        (pdf ? "application/pdf" : video ? "video/mp4" : "image/jpeg"),
       fileSize: input.file.size,
       moduleId: input.moduleId,
     },
@@ -185,7 +221,8 @@ export async function uploadDocument(
       ctx.organizationId,
       document.id,
       buffer,
-      ext
+      ext,
+      input.file.type || undefined
     );
 
     await db.document.update({
@@ -229,14 +266,17 @@ export async function uploadDocument(
           console.warn("[documents] auto-generación omitida:", genErr);
         }
       }
-    } else {
+    } else if (video || image) {
       await db.document.update({
         where: { id: document.id },
         data: {
           status: "READY",
           metadata: {
-            mediaType: "video",
+            mediaType: video ? "video" : "image",
             processedAt: new Date().toISOString(),
+            storageProvider: relativePath.startsWith("cloudinary://")
+              ? "cloudinary"
+              : "local",
           },
         },
       });

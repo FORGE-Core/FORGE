@@ -83,7 +83,7 @@ export async function DELETE(
     }
 
     if (video.fileUrl) {
-      const { deleteStoredFile } = await import("@/lib/document-storage");
+      const { deleteStoredFile } = await import("@/lib/storage");
       await deleteStoredFile(video.fileUrl);
     }
 

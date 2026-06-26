@@ -18,6 +18,7 @@ export type DocumentItem = {
   inclusionRecommendations?: string[];
   createdAt: string;
   hasFile: boolean;
+  deliveryUrl?: string | null;
 };
 
 export function DocumentList({

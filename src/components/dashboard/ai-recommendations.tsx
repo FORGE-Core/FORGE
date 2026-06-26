@@ -41,8 +41,8 @@ export function AIRecommendations({
             href={
               items[0]?.href ??
               (items[0]?.slug
-                ? `/dashboard/modules/${items[0].slug}`
-                : "/dashboard/modules")
+                ? `/modules/${items[0].slug}`
+                : "/modules")
             }
           >
             Reforzar conocimientos

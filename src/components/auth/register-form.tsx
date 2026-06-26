@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
+import { VoiceDictationInput } from "@/components/alae/voice-dictation-input";
 import { registerAction } from "@/server/actions/auth";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,14 +19,20 @@ export function RegisterForm() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [companyName, setCompanyName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
-    const formData = new FormData(e.currentTarget);
-    const password = String(formData.get("password"));
+    const formData = new FormData();
+    formData.set("companyName", companyName);
+    formData.set("email", email);
+    formData.set("password", password);
+
     const result = await registerAction(formData);
 
     if (!result.ok) {
@@ -47,7 +54,7 @@ export function RegisterForm() {
       return;
     }
 
-    router.push("/dashboard/onboarding");
+    router.push("/onboarding");
     router.refresh();
   }
 
@@ -71,50 +78,41 @@ export function RegisterForm() {
               {error}
             </p>
           )}
-          <div>
-            <label htmlFor="companyName" className="sr-only">
-              Nombre de la empresa
-            </label>
-            <input
-              id="companyName"
-              name="companyName"
-              required
-              placeholder="Nombre de la empresa"
-              aria-label="Nombre de la empresa"
-              className="w-full rounded-2xl border border-black/10 bg-brand-light-bg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-cobalt/30"
-            />
-          </div>
-          <div>
-            <label htmlFor="register-email" className="sr-only">
-              Correo electrónico
-            </label>
-            <input
-              id="register-email"
-              name="email"
-              type="email"
-              required
-              autoComplete="email"
-              placeholder="Tu correo corporativo"
-              aria-label="Correo electrónico"
-              className="w-full rounded-2xl border border-black/10 bg-brand-light-bg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-cobalt/30"
-            />
-          </div>
-          <div>
-            <label htmlFor="register-password" className="sr-only">
-              Contraseña
-            </label>
-            <input
-              id="register-password"
-              name="password"
-              type="password"
-              required
-              minLength={6}
-              autoComplete="new-password"
-              placeholder="Contraseña (mín. 6 caracteres)"
-              aria-label="Contraseña"
-              className="w-full rounded-2xl border border-black/10 bg-brand-light-bg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-cobalt/30"
-            />
-          </div>
+          <VoiceDictationInput
+            id="companyName"
+            name="companyName"
+            label="Nombre de la empresa"
+            value={companyName}
+            onChange={setCompanyName}
+            placeholder="Nombre de la empresa"
+            required
+            authForm
+          />
+          <VoiceDictationInput
+            id="register-email"
+            name="email"
+            label="Correo electrónico"
+            type="email"
+            value={email}
+            onChange={setEmail}
+            autoComplete="email"
+            placeholder="Tu correo corporativo"
+            required
+            authForm
+          />
+          <VoiceDictationInput
+            id="register-password"
+            name="password"
+            label="Contraseña"
+            type="password"
+            value={password}
+            onChange={setPassword}
+            autoComplete="new-password"
+            placeholder="Contraseña (mín. 6 caracteres)"
+            required
+            minLength={6}
+            authForm
+          />
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Creando cuenta…" : "Crear cuenta"}
           </Button>

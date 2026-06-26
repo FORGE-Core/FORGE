@@ -11,6 +11,7 @@ import {
 import Link from "next/link";
 import { Navbar } from "@/components/layout/navbar";
 import { Button } from "@/components/ui/button";
+import { Volume2 } from "lucide-react";
 
 const features: { icon: LucideIcon; title: string; desc: string }[] = [
   {
@@ -40,9 +41,19 @@ export default function HomePage() {
     <div className="min-h-screen bg-brand-light-bg">
       <Navbar />
 
-      <section className="relative overflow-hidden px-6 pb-24 pt-32">
+      <main id="main-content" tabIndex={-1}>
+      <section className="relative overflow-hidden px-6 pb-24 pt-28 md:pt-32">
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-brand-champagne/60 to-transparent" />
         <div className="relative mx-auto max-w-5xl text-center">
+          <p className="mx-auto mb-6 max-w-xl">
+            <Link
+              href="/accesible"
+              className="inline-flex items-center justify-center gap-2 rounded-full border border-brand-cobalt/30 bg-white px-5 py-2.5 text-sm font-medium text-brand-cobalt shadow-sm hover:bg-brand-champagne/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cobalt"
+            >
+              <Volume2 className="h-4 w-4" aria-hidden />
+              Acceso con lectura por voz (sin instalar apps)
+            </Link>
+          </p>
           <span className="inline-block animate-in fade-in slide-in-from-bottom-2 rounded-full border border-brand-lavender/30 bg-white px-4 py-1.5 text-xs font-medium text-brand-cobalt duration-500">
             Capacitación empresarial · IA · Logística
           </span>
@@ -195,6 +206,7 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+      </main>
     </div>
   );
 }

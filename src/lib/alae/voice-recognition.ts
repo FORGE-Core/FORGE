@@ -4,6 +4,7 @@ export type SpeechRecognitionInstance = {
   lang: string;
   continuous: boolean;
   interimResults: boolean;
+  maxAlternatives?: number;
   start: () => void;
   stop: () => void;
   abort: () => void;
@@ -14,7 +15,10 @@ export type SpeechRecognitionInstance = {
 
 export type SpeechRecognitionResultList = {
   length: number;
-  [index: number]: { [index: number]: { transcript: string }; isFinal?: boolean };
+  [index: number]: {
+    [index: number]: { transcript: string };
+    isFinal: boolean;
+  };
 };
 
 export type SpeechRecognitionEvent = {

@@ -1,7 +1,6 @@
 import { Clock, Play } from "lucide-react";
 import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
-import { ProgressBar } from "@/components/ui/progress-bar";
+import { getModuleStatusClasses } from "@/lib/training/module-status-styles";
 import { cn } from "@/lib/utils";
 
 export interface ModuleCardData {
@@ -14,6 +13,31 @@ export interface ModuleCardData {
   progress: number;
   gradient: string;
   inclusionScore?: number | null;
+}
+
+function ModuleProgressBar({
+  value,
+  status,
+}: {
+  value: number;
+  status: ModuleCardData["status"];
+}) {
+  const classes = getModuleStatusClasses(status);
+  const pct = Math.min(100, Math.max(0, value));
+
+  return (
+    <div
+      className={cn(
+        "module-card__progress h-2.5 w-full overflow-hidden rounded-full bg-brand-light-bg",
+        classes.progress
+      )}
+    >
+      <div
+        className="module-card__progress-fill h-full rounded-full transition-all duration-700"
+        style={{ width: `${pct}%` }}
+      />
+    </div>
+  );
 }
 
 export function ModuleCard({
@@ -30,29 +54,39 @@ export function ModuleCard({
         ? "En progreso"
         : "Pendiente";
 
+  const classes = getModuleStatusClasses(module.status);
+
   return (
     <div
       className="animate-in fade-in slide-in-from-bottom-3 duration-300 fill-mode-both"
       style={{ animationDelay: `${index * 60}ms` }}
     >
       <Link
-        href={`/dashboard/modules/${module.slug}`}
-        className="group block overflow-hidden rounded-[24px] border border-black/5 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg"
+        href={`/modules/${module.slug}`}
+        className={cn(
+          "group block shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg",
+          classes.card
+        )}
       >
-        <div
-          className={cn(
-            "relative flex h-36 items-end bg-gradient-to-br p-5",
-            module.gradient
-          )}
-        >
-          <Badge className="absolute right-4 top-4 border-white/20 bg-white/15 text-white backdrop-blur-sm">
-            {statusLabel}
-          </Badge>
-          <div className="text-white">
-            <p className="text-xs font-medium uppercase tracking-wide text-white/70">
+        <div className={classes.header}>
+          <span className={classes.badge}>{statusLabel}</span>
+          <div>
+            <p
+              className={cn(
+                "text-xs font-medium uppercase tracking-wide",
+                module.status === "pending"
+                  ? "text-[#5c4a1a]/70"
+                  : "text-white/70"
+              )}
+            >
               {module.category}
             </p>
-            <h3 className="font-heading text-lg font-bold leading-tight">
+            <h3
+              className={cn(
+                "font-heading text-lg font-bold leading-tight",
+                module.status === "pending" && "text-[#5c4a1a]"
+              )}
+            >
               {module.title}
             </h3>
           </div>
@@ -65,9 +99,9 @@ export function ModuleCard({
             </span>
             <span>{module.level}</span>
           </div>
-          <ProgressBar value={module.progress} />
+          <ModuleProgressBar value={module.progress} status={module.status} />
           <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold text-brand-cobalt">
+            <span className={cn("text-sm font-semibold", classes.progressText)}>
               {module.progress}%
             </span>
             <span className="flex items-center gap-1 text-xs font-medium text-brand-muted-gray transition-colors group-hover:text-brand-cobalt">

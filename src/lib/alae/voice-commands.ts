@@ -14,17 +14,17 @@ type CommandRule = {
 const RULES: CommandRule[] = [
   {
     patterns: [/abrir (?:nova|mentor|chat)/i, /ir al mentor/i],
-    action: { type: "NAVIGATE", href: "/dashboard/chat" },
+    action: { type: "NAVIGATE", href: "/chat" },
     feedback: "Abriendo mentor NOVA",
   },
   {
     patterns: [/ir a módulos/i, /abrir módulos/i],
-    action: { type: "NAVIGATE", href: "/dashboard/modules" },
+    action: { type: "NAVIGATE", href: "/modules" },
     feedback: "Abriendo módulos",
   },
   {
     patterns: [/ir a actividades/i],
-    action: { type: "NAVIGATE", href: "/dashboard/activities" },
+    action: { type: "NAVIGATE", href: "/activities" },
     feedback: "Abriendo actividades",
   },
   {

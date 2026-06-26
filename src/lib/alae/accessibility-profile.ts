@@ -17,6 +17,7 @@ const DEFAULTS: AccessibilityProfileData = {
   wizardCompleted: false,
   voiceCommandsEnabled: false,
   voiceInputEnabled: false,
+  assistedReadingMode: false,
 };
 
 export function serializeAccessibilityProfile(
@@ -37,6 +38,7 @@ export function serializeAccessibilityProfile(
     wizardCompleted: row.wizardCompleted,
     voiceCommandsEnabled: row.voiceCommandsEnabled,
     voiceInputEnabled: row.voiceInputEnabled,
+    assistedReadingMode: row.assistedReadingMode,
   };
 }
 
@@ -70,6 +72,7 @@ export async function updateAccessibilityProfile(
     wizardCompleted: boolean;
     voiceCommandsEnabled: boolean;
     voiceInputEnabled: boolean;
+    assistedReadingMode: boolean;
     declaredNeeds: object;
   }>
 ) {

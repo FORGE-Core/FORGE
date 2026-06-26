@@ -22,7 +22,12 @@ export async function getDashboardData(
   orgName: string
 ) {
   const { organizationId, userId } = ctx;
-  const modules = await getOrganizationModules(organizationId, userId);
+
+  const [modules, alaeContext] = await Promise.all([
+    getOrganizationModules(organizationId, userId),
+    getAlaeContextForUser(userId, organizationId),
+  ]);
+
   const completed = modules.filter((m) => m.status === "completed").length;
   const pending = modules.filter((m) => m.status !== "completed").length;
   const overallProgress = modules.length
@@ -197,7 +202,6 @@ export async function getDashboardData(
     modules.find((m) => m.status === "in_progress") ??
     modules.find((m) => m.status === "pending");
 
-  const alaeContext = await getAlaeContextForUser(userId, organizationId);
   const alaeRecommendations = buildAlaeRecommendations({
     preferredModality: alaeContext.learning.preferredModality,
     supportLevel: alaeContext.learning.supportLevel,

@@ -8,5 +8,4 @@ export { organizationClient } from "./organization.client";
 export { alaeClient } from "./alae.client";
 export { accessibilityClient } from "./accessibility.client";
 export { notificationsClient } from "./notifications.client";
-export { automationsClient } from "./automations.client";
 export { onboardingClient } from "./onboarding.client";

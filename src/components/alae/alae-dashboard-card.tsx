@@ -69,10 +69,10 @@ export function AlaeDashboardCard({
 
         <div className="flex flex-wrap gap-2">
           <Button size="sm" variant="outline" asChild>
-            <Link href="/dashboard/accessibility">Ajustar accesibilidad</Link>
+            <Link href="/profile">Ajustar accesibilidad</Link>
           </Button>
           <Button size="sm" asChild>
-            <Link href="/dashboard/chat">Ir a NOVA</Link>
+            <Link href="/chat">Ir a NOVA</Link>
           </Button>
         </div>
       </CardContent>

@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   Download,
   FileText,
+  ImageIcon,
   Loader2,
   MoreVertical,
   Sparkles,
@@ -76,15 +77,27 @@ export function DocumentCard({
   const [showVideo, setShowVideo] = useState(false);
 
   const isVideo = doc.type === "VIDEO";
+  const isImage = doc.type === "IMAGE";
+  const isPdf = doc.type === "PDF";
   const st = statusLabel(doc.status);
   const canDownload = !!doc.hasFile;
-  const fileUrl = `/api/documents/${doc.id}/file`;
+  const fileUrl =
+    doc.deliveryUrl ?? `/api/documents/${doc.id}/file`;
 
   async function handleDownload() {
     setMenuOpen(false);
     setDownloading(true);
     setError(null);
     try {
+      if (doc.deliveryUrl) {
+        const a = document.createElement("a");
+        a.href = doc.deliveryUrl;
+        a.download = doc.title;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        a.click();
+        return;
+      }
       const blob = await documentsClient.downloadFile(doc.id);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -155,11 +168,15 @@ export function DocumentCard({
               "flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ring-1",
               isVideo
                 ? "bg-gradient-to-br from-violet-50 to-indigo-50 ring-violet-100"
-                : "bg-gradient-to-br from-red-50 to-orange-50 ring-red-100"
+                : isImage
+                  ? "bg-gradient-to-br from-emerald-50 to-teal-50 ring-emerald-100"
+                  : "bg-gradient-to-br from-red-50 to-orange-50 ring-red-100"
             )}
           >
             {isVideo ? (
               <Video className="h-6 w-6 text-brand-cobalt" />
+            ) : isImage ? (
+              <ImageIcon className="h-6 w-6 text-emerald-600" />
             ) : (
               <FileText className="h-6 w-6 text-red-500" />
             )}
@@ -170,7 +187,7 @@ export function DocumentCard({
             </CardTitle>
             <p className="mt-1 text-xs text-brand-muted-gray">
               {formatDate(doc.createdAt)} · {formatSize(doc.fileSize)}
-              {isVideo ? " · Video" : " · PDF"}
+              {isVideo ? " · Video" : isImage ? " · Imagen" : " · PDF"}
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
@@ -253,6 +270,21 @@ export function DocumentCard({
                   </Button>
                 )}
               </>
+            ) : isImage ? (
+              <a
+                href={fileUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block overflow-hidden rounded-2xl ring-1 ring-black/5"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={fileUrl}
+                  alt={doc.title}
+                  className="max-h-80 w-full object-contain bg-brand-light-bg"
+                  loading="lazy"
+                />
+              </a>
             ) : (
               <>
                 {doc.inclusionScore != null && (
@@ -394,7 +426,7 @@ export function DocumentCard({
           <CardContent>
             <div className="flex items-center gap-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900">
               <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
-              {isVideo ? "Procesando video…" : "Indexando para el mentor IA…"}
+              {isVideo ? "Procesando video…" : isImage ? "Optimizando imagen…" : "Indexando para el mentor IA…"}
             </div>
           </CardContent>
         )}
@@ -423,7 +455,7 @@ export function DocumentCard({
                     </p>
                     <p className="text-xs text-red-700/80">
                       Se borrará el archivo
-                      {!isVideo && " y los fragmentos de IA"}. Esta acción no se
+                      {isPdf && " y los fragmentos de IA"}. Esta acción no se
                       puede deshacer.
                     </p>
                   </div>

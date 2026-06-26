@@ -1,5 +1,3 @@
-"use client";
-
 import { AlertTriangle, Lightbulb } from "lucide-react";
 
 type Issue = { code: string; severity: string; message: string };
