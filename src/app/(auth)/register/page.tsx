@@ -1,6 +1,5 @@
 import { Suspense } from "react";
 import { RegisterForm } from "@/components/auth/register-form";
-import { AuthVoiceAssist } from "@/components/alae/auth-voice-assist";
 import { AssistedReadingAutoEnable } from "@/components/alae/assisted-reading-auto-enable";
 
 export default function RegisterPage() {
@@ -12,7 +11,6 @@ export default function RegisterPage() {
     >
       <Suspense fallback={null}>
         <AssistedReadingAutoEnable />
-        <AuthVoiceAssist />
       </Suspense>
       <div className="w-full max-w-md space-y-6">
         <h1 className="sr-only">Crear cuenta en FORGE</h1>

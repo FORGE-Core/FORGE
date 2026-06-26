@@ -1,4 +1,4 @@
-import { getAIProvider } from "@/ai/providers";
+import { getAIProvider, getEmbeddingProvider } from "@/ai/providers";
 import { buildNovaSystemAugmentation } from "@/lib/alae/prompts";
 import type { AlaeContext } from "@/lib/alae/types";
 import { getEnv } from "@/lib/env";
@@ -25,8 +25,9 @@ export async function prepareRAGContext(
 
   if (ragEnabled) {
     try {
-      const provider = getAIProvider();
-      const [queryEmbedding] = await provider.embed({ input: question });
+      const [queryEmbedding] = await getEmbeddingProvider().embed({
+        input: question,
+      });
       sources = await searchSimilarChunks({
         organizationId,
         embedding: queryEmbedding,

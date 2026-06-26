@@ -48,11 +48,17 @@ Cappi es una plataforma SaaS **multi-tenant** de capacitación empresarial con I
 ai/providers/
   types.ts      → interfaz AIProvider
   openai.ts     → GPT + embeddings
+  gemini.ts     → Gemini chat + embeddings
+  anthropic.ts  → Claude chat (sin embeddings)
   ollama.ts     → Llama 3 local
-  index.ts      → factory getAIProvider()
+  index.ts      → factory getAIProvider() / getEmbeddingProvider()
 ```
 
-Cambiar proveedor: `AI_DEFAULT_PROVIDER=ollama` en `.env`.
+Cambiar proveedor de chat: `AI_DEFAULT_PROVIDER=anthropic` en `.env`.
+
+Claude no expone endpoint de embeddings, por lo que el proveedor de embeddings
+se resuelve por separado vía `getEmbeddingProvider()` (`EMBEDDING_PROVIDER`, con
+fallback a Gemini cuando el chat usa Anthropic).
 
 ## Migración futura a microservicios
 

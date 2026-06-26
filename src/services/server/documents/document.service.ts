@@ -231,9 +231,6 @@ export async function uploadDocument(
     });
 
     let chunkCount = 0;
-    let generated: Awaited<
-      ReturnType<typeof generateLearningContentFromDocument>
-    > | null = null;
 
     if (pdf) {
       const text = await extractPdfText(buffer);
@@ -245,26 +242,29 @@ export async function uploadDocument(
 
       const autoGenerate = input.autoGenerate !== false;
       if (autoGenerate && chunkCount > 0) {
-        try {
-          generated = await generateLearningContentFromDocument({
-            organizationId: ctx.organizationId,
-            documentId: document.id,
-            moduleId: input.moduleId,
-          });
-          await logLearningEvent({
-            organizationId: ctx.organizationId,
-            userId: ctx.userId,
-            eventType: "DOCUMENT_CONTENT_GENERATED",
-            payload: {
+        // Generación de contenido IA en background — no bloquea la respuesta
+        void (async () => {
+          try {
+            const gen = await generateLearningContentFromDocument({
+              organizationId: ctx.organizationId,
               documentId: document.id,
-              moduleId: generated.moduleId,
-              items: generated.created,
-              auto: true,
-            },
-          });
-        } catch (genErr) {
-          console.warn("[documents] auto-generación omitida:", genErr);
-        }
+              moduleId: input.moduleId,
+            });
+            await logLearningEvent({
+              organizationId: ctx.organizationId,
+              userId: ctx.userId,
+              eventType: "DOCUMENT_CONTENT_GENERATED",
+              payload: {
+                documentId: document.id,
+                moduleId: gen.moduleId,
+                items: gen.created,
+                auto: true,
+              },
+            });
+          } catch (genErr) {
+            console.warn("[documents] auto-generación omitida:", genErr);
+          }
+        })();
       }
     } else if (video || image) {
       await db.document.update({
@@ -297,7 +297,7 @@ export async function uploadDocument(
         fileSize: updated!.fileSize,
         createdAt: updated!.createdAt,
       },
-      generated,
+      generated: null,
     };
   } catch (processError) {
     console.error("[documents upload]", processError);

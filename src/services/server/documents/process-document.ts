@@ -56,39 +56,42 @@ export async function processDocumentContent({
     });
   });
 
-  const { embedded, skipped } = await embedDocumentChunks(
-    documentId,
-    organizationId
-  );
+  // Embeddings e inclusión en background — no bloquean la respuesta al cliente
+  void (async () => {
+    try {
+      const { embedded, skipped } = await embedDocumentChunks(documentId, organizationId);
+      if (!skipped && embedded > 0) {
+        await db.document.update({
+          where: { id: documentId },
+          data: {
+            metadata: {
+              chunkCount: chunks.length,
+              embeddingCount: embedded,
+              embeddingsAt: new Date().toISOString(),
+              processedAt: new Date().toISOString(),
+            },
+          },
+        });
+      }
+    } catch (err) {
+      console.warn("[embed] background omitido:", err);
+    }
 
-  if (!skipped && embedded > 0) {
-    await db.document.update({
-      where: { id: documentId },
-      data: {
-        metadata: {
-          chunkCount: chunks.length,
-          embeddingCount: embedded,
-          embeddingsAt: new Date().toISOString(),
-          processedAt: new Date().toISOString(),
-        },
-      },
-    });
-  }
-
-  try {
-    const { auditContentInclusion, saveInclusionAudit } = await import(
-      "@/lib/alae/inclusion-scorer"
-    );
-    const result = await auditContentInclusion(text, true);
-    await saveInclusionAudit({
-      organizationId,
-      targetType: "DOCUMENT",
-      targetId: documentId,
-      result,
-    });
-  } catch (err) {
-    console.warn("[ALAE] inclusion audit omitido:", err);
-  }
+    try {
+      const { auditContentInclusion, saveInclusionAudit } = await import(
+        "@/lib/alae/inclusion-scorer"
+      );
+      const result = await auditContentInclusion(text, true);
+      await saveInclusionAudit({
+        organizationId,
+        targetType: "DOCUMENT",
+        targetId: documentId,
+        result,
+      });
+    } catch (err) {
+      console.warn("[ALAE] inclusion audit omitido:", err);
+    }
+  })();
 
   return chunks.length;
 }

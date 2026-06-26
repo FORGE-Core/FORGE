@@ -1,6 +1,5 @@
 import { Suspense } from "react";
 import { LoginForm } from "@/components/auth/login-form";
-import { AuthVoiceAssist } from "@/components/alae/auth-voice-assist";
 import { AssistedReadingAutoEnable } from "@/components/alae/assisted-reading-auto-enable";
 
 export default function LoginPage() {
@@ -16,7 +15,6 @@ export default function LoginPage() {
     >
       <Suspense fallback={null}>
         <AssistedReadingAutoEnable />
-        <AuthVoiceAssist />
       </Suspense>
 
       <div className="w-full max-w-md space-y-6">

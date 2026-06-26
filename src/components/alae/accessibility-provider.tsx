@@ -78,7 +78,9 @@ function normalizeAssistedProfile(
       autoReadAloud: true,
     };
   }
-  return profile;
+  // Sin modo lectura asistida el fontScale vuelve al default para evitar que
+  // configuraciones previas del botón de voz dejen el texto inflado.
+  return { ...profile, fontScale: 1 };
 }
 
 export function AccessibilityProvider({

@@ -212,7 +212,10 @@ export function VoiceDictationInput({
           name={name}
           type={type}
           value={displayValue}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) => {
+            if (listeningRef.current) stop();
+            onChange(e.target.value);
+          }}
           onFocus={handleInputFocus}
           onBlur={handleInputBlur}
           required={required}
@@ -221,7 +224,6 @@ export function VoiceDictationInput({
           placeholder={placeholder}
           aria-label={label}
           aria-describedby={showMic ? hintId : undefined}
-          readOnly={listening}
           className="min-w-0 flex-1 rounded-2xl border border-black/10 bg-brand-light-bg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-cobalt/30 dark:border-white/10 dark:bg-[#1c1c1f]"
         />
         {!micFirst && micButton}

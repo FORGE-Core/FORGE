@@ -27,7 +27,7 @@ export function AIRecommendations({
         <ul className="space-y-3">
           {items.map((rec, i) => (
             <li
-              key={rec.topic}
+              key={`${rec.topic}-${i}`}
               className="rounded-2xl border border-black/5 bg-white px-4 py-3 animate-in fade-in slide-in-from-left-2 duration-300 fill-mode-both"
               style={{ animationDelay: `${i * 80}ms` }}
             >

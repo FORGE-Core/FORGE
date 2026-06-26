@@ -51,7 +51,7 @@ export default function HomePage() {
               className="inline-flex items-center justify-center gap-2 rounded-full border border-brand-cobalt/30 bg-white px-5 py-2.5 text-sm font-medium text-brand-cobalt shadow-sm hover:bg-brand-champagne/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cobalt"
             >
               <Volume2 className="h-4 w-4" aria-hidden />
-              Acceso con lectura por voz (sin instalar apps)
+              Acceso con lectura por voz
             </Link>
           </p>
           <span className="inline-block animate-in fade-in slide-in-from-bottom-2 rounded-full border border-brand-lavender/30 bg-white px-4 py-1.5 text-xs font-medium text-brand-cobalt duration-500">
