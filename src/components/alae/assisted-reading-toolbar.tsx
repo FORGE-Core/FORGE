@@ -1,13 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import { usePathname } from "next/navigation";
 import { Pause, Play, Volume2, X } from "lucide-react";
 import { announce } from "@/lib/alae/announcer";
 import {
   ASSISTED_READING_HELP,
   getMainContentSpeech,
-  getReadableLabel,
 } from "@/lib/alae/read-element";
 import { Button } from "@/components/ui/button";
 import { useAccessibility } from "./accessibility-provider";
@@ -21,9 +19,6 @@ export function AssistedReadingToolbar() {
     speakForUser,
   } = useAccessibility();
 
-  const pathname = usePathname();
-  const lastFocusRef = useRef<Element | null>(null);
-  const focusTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const welcomedRef = useRef(false);
 
   const readAloud = useCallback(
@@ -53,40 +48,15 @@ export function AssistedReadingToolbar() {
 
     if (!welcomedRef.current) {
       welcomedRef.current = true;
-      readAloud(
-        "Modo lectura asistida activado. FORGE leerá en voz alta lo que selecciones con Tab. " +
-          ASSISTED_READING_HELP
+      announce(
+        "Modo lectura asistida activado. La página se leerá en voz alta al entrar. " +
+          "Atajos: Alt R lee la página, Alt S detiene, Alt H ayuda."
       );
     }
-  }, [assistedReadingMode, readAloud]);
+  }, [assistedReadingMode]);
 
   useEffect(() => {
     if (!assistedReadingMode) return;
-
-    const timer = setTimeout(() => {
-      const intro = getMainContentSpeech();
-      if (intro.length > 20) readAloud(intro.slice(0, 280));
-    }, 600);
-
-    return () => clearTimeout(timer);
-  }, [pathname, assistedReadingMode, readAloud]);
-
-  useEffect(() => {
-    if (!assistedReadingMode) return;
-
-    function onFocusIn(event: FocusEvent) {
-      const target = event.target;
-      if (!(target instanceof Element)) return;
-
-      if (focusTimer.current) clearTimeout(focusTimer.current);
-      focusTimer.current = setTimeout(() => {
-        if (lastFocusRef.current === target) return;
-        lastFocusRef.current = target;
-
-        const label = getReadableLabel(target);
-        if (label) readAloud(label);
-      }, 350);
-    }
 
     function onKeyDown(event: KeyboardEvent) {
       if (!event.altKey) return;
@@ -105,13 +75,10 @@ export function AssistedReadingToolbar() {
       }
     }
 
-    document.addEventListener("focusin", onFocusIn, true);
     document.addEventListener("keydown", onKeyDown);
 
     return () => {
-      document.removeEventListener("focusin", onFocusIn, true);
       document.removeEventListener("keydown", onKeyDown);
-      if (focusTimer.current) clearTimeout(focusTimer.current);
     };
   }, [assistedReadingMode, readAloud, readPage, stop]);
 
@@ -122,11 +89,15 @@ export function AssistedReadingToolbar() {
       className="fixed bottom-0 left-0 right-0 z-[60] border-t border-brand-cobalt/30 bg-[#0a0a0a] px-3 py-3 text-white shadow-[0_-8px_32px_rgba(0,0,0,0.35)] md:px-6"
       role="region"
       aria-label="Controles de lectura asistida"
+      data-alae-skip-speech
     >
       <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-3">
         <p className="flex items-center gap-2 text-sm font-medium">
           <Volume2 className="h-5 w-5 shrink-0 text-brand-lavender" aria-hidden />
           Modo para lectura por voz
+        </p>
+        <p className="w-full text-xs text-white/70 md:w-auto">
+          Si no escuchas nada, pulsa Leer página o haz clic en la pantalla una vez.
         </p>
         <div className="flex flex-wrap gap-2">
           <Button

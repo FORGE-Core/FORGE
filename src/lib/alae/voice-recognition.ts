@@ -4,7 +4,6 @@ export type SpeechRecognitionInstance = {
   lang: string;
   continuous: boolean;
   interimResults: boolean;
-  maxAlternatives?: number;
   start: () => void;
   stop: () => void;
   abort: () => void;
@@ -15,10 +14,7 @@ export type SpeechRecognitionInstance = {
 
 export type SpeechRecognitionResultList = {
   length: number;
-  [index: number]: {
-    [index: number]: { transcript: string };
-    isFinal: boolean;
-  };
+  [index: number]: { [index: number]: { transcript: string }; isFinal?: boolean };
 };
 
 export type SpeechRecognitionEvent = {
@@ -37,4 +33,17 @@ export function getSpeechRecognition(): SpeechRecognitionCtor | null {
 
 export function isVoiceSupported() {
   return getSpeechRecognition() !== null && typeof window !== "undefined";
+}
+
+const SPEECH_ERROR_MESSAGES: Record<string, string> = {
+  "not-allowed":
+    "Permiso de micrófono denegado. Permite el micrófono en la configuración del navegador.",
+  "no-speech": "No escuché nada. Presiona espacio en el micrófono e intenta de nuevo.",
+  network: "Error de red al usar el micrófono. Revisa tu conexión.",
+  "audio-capture": "No se encontró micrófono. Conecta uno e intenta de nuevo.",
+  aborted: "",
+};
+
+export function getSpeechErrorMessage(error: string): string {
+  return SPEECH_ERROR_MESSAGES[error] ?? "No se pudo usar el micrófono. Intenta de nuevo.";
 }

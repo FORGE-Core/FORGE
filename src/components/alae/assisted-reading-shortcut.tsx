@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { clampFontScale } from "@/lib/alae/dom-effects";
-import { speakText } from "@/lib/alae/speech";
+import { unlockSpeechFromGesture, speakNow } from "@/lib/alae/speech";
 import { useAccessibility } from "./accessibility-provider";
 
 const HELP =
@@ -19,6 +19,7 @@ export function AssistedReadingShortcut() {
       if (event.key.toLowerCase() !== "l") return;
 
       event.preventDefault();
+      unlockSpeechFromGesture();
       const enabling = !assistedReadingMode;
       void updatePreferences({
         assistedReadingMode: enabling,
@@ -34,7 +35,7 @@ export function AssistedReadingShortcut() {
           : { highContrast: false }),
       });
 
-      speakText(
+      speakNow(
         enabling
           ? "Modo lectura activado. " + HELP
           : "Modo lectura desactivado."

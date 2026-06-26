@@ -13,6 +13,16 @@ const ROLE_LABELS: Record<string, string> = {
   search: "Búsqueda",
 };
 
+const SKIP_SPEECH_SELECTORS = [
+  '[aria-hidden="true"]',
+  ".sr-only",
+  "script",
+  "style",
+  "noscript",
+  '[aria-label="Controles de lectura asistida"]',
+  "[data-alae-skip-speech]",
+].join(",");
+
 function roleLabel(el: Element): string | null {
   const explicit = el.getAttribute("role");
   if (explicit && ROLE_LABELS[explicit]) return ROLE_LABELS[explicit];
@@ -48,6 +58,7 @@ function textFromLabelledBy(el: Element): string | null {
 export function getReadableLabel(el: Element): string | null {
   if (!(el instanceof HTMLElement)) return null;
   if (el.closest('[aria-hidden="true"]')) return null;
+  if (el.closest('[aria-label="Controles de lectura asistida"]')) return null;
   if (el.id?.startsWith("sr-announcer")) return null;
   if (el.classList.contains("sr-only") && el.closest("[aria-live]")) return null;
 
@@ -93,23 +104,24 @@ export function getReadableLabel(el: Element): string | null {
   return prefix ? `${prefix}: ${text}` : text;
 }
 
+function getReadableRoot(): HTMLElement {
+  return (
+    (document.getElementById("main-content") as HTMLElement | null) ??
+    (document.querySelector("main") as HTMLElement | null) ??
+    document.body
+  );
+}
+
 /** Lee el contenido principal de la página actual. */
 export function getMainContentSpeech(): string {
-  const main =
-    document.getElementById("main-content") ??
-    document.querySelector("main") ??
-    document.body;
+  const main = getReadableRoot();
+  const clone = main.cloneNode(true) as HTMLElement;
+  clone.querySelectorAll(SKIP_SPEECH_SELECTORS).forEach((el) => el.remove());
 
-  const heading = main.querySelector("h1")?.textContent?.trim();
-  const paragraphs = Array.from(main.querySelectorAll("p"))
-    .map((p) => p.textContent?.replace(/\s+/g, " ").trim())
-    .filter((t) => t && t.length > 2 && t.length < 300)
-    .slice(0, 5);
-
-  const parts: string[] = [];
-  if (heading) parts.push(heading);
-  parts.push(...paragraphs);
-  return parts.join(". ") || "Página sin texto legible.";
+  const text = clone.innerText.replace(/\s+/g, " ").trim();
+  if (!text) return "Página sin texto legible.";
+  if (text.length > 4000) return `${text.slice(0, 4000)}.`;
+  return text;
 }
 
 export const ASSISTED_READING_HELP =

@@ -86,7 +86,8 @@ export function RegisterForm() {
             onChange={setCompanyName}
             placeholder="Nombre de la empresa"
             required
-            authForm
+            alwaysShowVoice
+            autoStartOnFocus
           />
           <VoiceDictationInput
             id="register-email"
@@ -98,7 +99,8 @@ export function RegisterForm() {
             autoComplete="email"
             placeholder="Tu correo corporativo"
             required
-            authForm
+            alwaysShowVoice
+            autoStartOnFocus
           />
           <VoiceDictationInput
             id="register-password"
@@ -111,7 +113,8 @@ export function RegisterForm() {
             placeholder="Contraseña (mín. 6 caracteres)"
             required
             minLength={6}
-            authForm
+            alwaysShowVoice
+            autoStartOnFocus
           />
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Creando cuenta…" : "Crear cuenta"}

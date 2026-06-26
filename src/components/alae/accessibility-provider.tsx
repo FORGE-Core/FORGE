@@ -18,7 +18,7 @@ import {
 import { applyAccessibilityDomEffects } from "@/lib/alae/dom-effects";
 import { announce } from "@/lib/alae/announcer";
 import type { AccessibilityProfileData } from "@/lib/alae/types";
-import { speakText, stopSpeaking } from "@/lib/alae/speech";
+import { speakNow, speakText, stopSpeaking, unlockSpeechFromGesture } from "@/lib/alae/speech";
 import { accessibilityClient } from "@/services/client";
 
 const PreferenceWizard = dynamic(
@@ -110,24 +110,12 @@ export function AccessibilityProvider({
   }, []);
 
   const refresh = useCallback(async () => {
-    const cached = readCachedProfile();
     try {
       const data = await accessibilityClient.getProfile();
       if (data.profile) {
-        const server = data.profile as AccessibilityProfileData;
-        const next = normalizeAssistedProfile({
-          ...DEFAULTS,
-          ...server,
-          ...(cached?.assistedReadingMode && !server.assistedReadingMode
-            ? {
-                assistedReadingMode: true,
-                voiceInputEnabled: true,
-                autoReadAloud: cached.autoReadAloud ?? true,
-                darkMode: true,
-                fontScale: Math.max(server.fontScale ?? 1, cached.fontScale ?? 1),
-              }
-            : {}),
-        });
+        const next = normalizeAssistedProfile(
+          data.profile as AccessibilityProfileData
+        );
         setProfile(next);
         applyDomEffects(next);
         writeCachedProfile(next);
@@ -136,9 +124,14 @@ export function AccessibilityProvider({
         }
       }
     } catch {
-      const fallback = normalizeAssistedProfile(cached ?? DEFAULTS);
-      setProfile(fallback);
-      applyDomEffects(fallback);
+      const cached = readCachedProfile();
+      if (cached) {
+        const normalized = normalizeAssistedProfile(cached);
+        setProfile(normalized);
+        applyDomEffects(normalized);
+      } else {
+        applyDomEffects(DEFAULTS);
+      }
     } finally {
       setLoading(false);
     }
@@ -204,10 +197,7 @@ export function AccessibilityProvider({
 
       const data = await accessibilityClient.updateProfile(patch).catch(() => null);
       if (data?.profile) {
-        const updated = normalizeAssistedProfile({
-          ...profileRef.current,
-          ...(data.profile as AccessibilityProfileData),
-        });
+        const updated = data.profile as AccessibilityProfileData;
         setProfile(updated);
         applyDomEffects(updated);
         writeCachedProfile(updated);
@@ -217,10 +207,16 @@ export function AccessibilityProvider({
   );
 
   const speakForUser = useCallback((text: string) => {
-    speakText(text, "es-MX", {
+    unlockSpeechFromGesture();
+    const hooks = {
       onStart: () => setIsSpeaking(true),
       onEnd: () => setIsSpeaking(false),
-    });
+    };
+    if (text.length > 240) {
+      speakText(text, "es-MX", hooks);
+    } else {
+      speakNow(text, "es-MX", hooks);
+    }
   }, []);
 
   const speakAloud = useCallback(

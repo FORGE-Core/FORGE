@@ -5,8 +5,6 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { VoiceDictationInput } from "@/components/alae/voice-dictation-input";
-import { useAuthVoiceEnabled } from "@/hooks/use-auth-voice-enabled";
-import { useAccessibilityActions } from "@/components/alae/accessibility-provider";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -41,24 +39,6 @@ export function LoginForm({ googleEnabled = false }: LoginFormProps) {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const { enabled: voiceEnabled } = useAuthVoiceEnabled();
-  const { speakForUser } = useAccessibilityActions();
-  const [voiceHintSpoken, setVoiceHintSpoken] = useState(false);
-
-  useEffect(() => {
-    if (!voiceEnabled || voiceHintSpoken || status === "loading") return;
-    if (session?.user) return;
-    setVoiceHintSpoken(true);
-    speakForUser(
-      "Formulario de inicio de sesión. Usa el botón de micrófono junto a cada campo para dictar correo y contraseña."
-    );
-  }, [
-    voiceEnabled,
-    voiceHintSpoken,
-    status,
-    session?.user,
-    speakForUser,
-  ]);
 
   useEffect(() => {
     if (searchParams.get("signedOut") === "1") {
@@ -170,7 +150,11 @@ export function LoginForm({ googleEnabled = false }: LoginFormProps) {
           </>
         )}
 
-        <form className="space-y-3" onSubmit={onSubmit}>
+        <form className="space-y-3" onSubmit={onSubmit} aria-describedby="login-voice-help">
+          <p id="login-voice-help" className="sr-only">
+            Usa Tab para moverte. Cada opción se lee en voz alta. En correo y
+            contraseña el micrófono se activa solo. Di arroba y punto en el correo.
+          </p>
           {error && (
             <p
               role="alert"
@@ -189,7 +173,8 @@ export function LoginForm({ googleEnabled = false }: LoginFormProps) {
             autoComplete="email"
             placeholder="correo@empresa.com"
             required
-            authForm
+            alwaysShowVoice
+            autoStartOnFocus
           />
           <VoiceDictationInput
             id="login-password"
@@ -201,7 +186,8 @@ export function LoginForm({ googleEnabled = false }: LoginFormProps) {
             autoComplete="current-password"
             placeholder="Contraseña"
             required
-            authForm
+            alwaysShowVoice
+            autoStartOnFocus
           />
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Entrando…" : "Iniciar sesión"}

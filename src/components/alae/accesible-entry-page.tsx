@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { Volume2 } from "lucide-react";
 import { clampFontScale } from "@/lib/alae/dom-effects";
-import { speakText } from "@/lib/alae/speech";
+import { unlockSpeechFromGesture, speakNow } from "@/lib/alae/speech";
 import { Button } from "@/components/ui/button";
 import { useAccessibility } from "./accessibility-provider";
 
@@ -23,6 +23,7 @@ export function AccesibleEntryPage() {
   }, []);
 
   async function activate() {
+    unlockSpeechFromGesture();
     await updatePreferences({
       assistedReadingMode: true,
       fontScale: clampFontScale(Math.max(fontScale, 1.25)),
@@ -33,8 +34,8 @@ export function AccesibleEntryPage() {
       wizardCompleted: true,
       voiceInputEnabled: true,
     });
-    void speakText(
-      "Modo activado. " + INTRO + " Ahora puedes ir a iniciar sesión."
+    speakNow(
+      "Modo activado. Usa Tab para moverte. En login puedes dictar correo y contraseña."
     );
   }
 
