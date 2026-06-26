@@ -33,6 +33,15 @@ export function ModulesContent({
   const [newDescription, setNewDescription] = useState("");
   const [createError, setCreateError] = useState<string | null>(null);
 
+  // Edit/Delete states
+  const [editingModule, setEditingModule] = useState<ModuleCardData | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editAudience, setEditAudience] = useState("");
+  const [editEstimatedMins, setEditEstimatedMins] = useState(20);
+  const [updating, setUpdating] = useState(false);
+  const [updateError, setUpdateError] = useState<string | null>(null);
+
   const loadModules = useCallback(async () => {
     try {
       const data = await trainingClient.listModules();
@@ -64,6 +73,53 @@ export function ModulesContent({
       );
     } finally {
       setCreating(false);
+    }
+  }
+
+  async function handleDeleteClick(module: ModuleCardData) {
+    const confirmDelete = confirm(
+      `¿Estás seguro de que deseas eliminar el módulo "${module.title}"? Esta acción no se puede deshacer.`
+    );
+    if (!confirmDelete) return;
+
+    try {
+      await trainingClient.deleteModule(module.slug);
+      await loadModules();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Error al eliminar el módulo");
+    }
+  }
+
+  function handleEditClick(module: ModuleCardData) {
+    setEditingModule(module);
+    setEditTitle(module.title);
+    setEditDescription(module.description ?? "");
+    setEditAudience(module.audience ?? "");
+    setEditEstimatedMins(module.estimatedMins ?? 20);
+    setUpdateError(null);
+  }
+
+  async function handleUpdateSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingModule || !editTitle.trim()) return;
+
+    setUpdating(true);
+    setUpdateError(null);
+    try {
+      await trainingClient.updateModule(editingModule.slug, {
+        title: editTitle.trim(),
+        description: editDescription.trim() || undefined,
+        audience: editAudience.trim() || undefined,
+        estimatedMins: Number(editEstimatedMins),
+      });
+      setEditingModule(null);
+      await loadModules();
+    } catch (err) {
+      setUpdateError(
+        err instanceof ApiClientError ? err.message : "Error de conexión"
+      );
+    } finally {
+      setUpdating(false);
     }
   }
 
@@ -164,8 +220,87 @@ export function ModulesContent({
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
           {filtered.map((m, i) => (
-            <ModuleCard key={m.slug} module={m} index={i} />
+            <ModuleCard
+              key={m.slug}
+              module={m}
+              index={i}
+              isAdmin={isAdmin}
+              onEdit={handleEditClick}
+              onDelete={handleDeleteClick}
+            />
           ))}
+        </div>
+      )}
+
+      {editingModule && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <Card className="w-full max-w-lg shadow-2xl animate-in scale-in duration-200 border-brand-lavender/20 bg-white">
+            <CardHeader>
+              <CardTitle className="text-lg">Editar Módulo</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleUpdateSubmit} className="space-y-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-brand-muted-gray">Título</label>
+                  <input
+                    type="text"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    className="rounded-xl border border-black/10 bg-brand-light-bg px-3.5 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-cobalt/30"
+                    required
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-brand-muted-gray">Audiencia / Rol</label>
+                  <input
+                    type="text"
+                    value={editAudience}
+                    onChange={(e) => setEditAudience(e.target.value)}
+                    placeholder="Ej. Meseros, Cajeros"
+                    className="rounded-xl border border-black/10 bg-brand-light-bg px-3.5 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-cobalt/30"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-brand-muted-gray">Duración (minutos)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={editEstimatedMins}
+                    onChange={(e) => setEditEstimatedMins(Number(e.target.value))}
+                    className="rounded-xl border border-black/10 bg-brand-light-bg px-3.5 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-cobalt/30"
+                    required
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-brand-muted-gray">Descripción</label>
+                  <textarea
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    rows={3}
+                    className="rounded-xl border border-black/10 bg-brand-light-bg px-3.5 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-cobalt/30 resize-none"
+                  />
+                </div>
+                {updateError && (
+                  <p className="text-xs text-red-600 bg-red-50 p-2 rounded-lg">{updateError}</p>
+                )}
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setEditingModule(null)}
+                    disabled={updating}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button type="submit" size="sm" disabled={updating} className="gap-1.5">
+                    {updating && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                    Guardar
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>

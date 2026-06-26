@@ -21,6 +21,8 @@ import { AlaeAdaptButtons } from "@/components/alae/alae-adapt-buttons";
 import { cn } from "@/lib/utils";
 import type { ModuleDetailData } from "@/services/server/training/module-detail.service";
 import { ModuleAdminVideo } from "./module-admin-video";
+import { ModuleAdminDocument } from "./module-admin-document";
+import { ModuleAdminDetails } from "./module-admin-details";
 import { ModuleHero } from "./module-hero";
 
 export function ModuleDetailContent({
@@ -57,10 +59,24 @@ export function ModuleDetailContent({
           />
 
           {trainingModule.canManage && (
+            <ModuleAdminDetails
+              slug={slug}
+              module={trainingModule}
+            />
+          )}
+
+          {trainingModule.canManage && (
             <ModuleAdminVideo
               slug={slug}
               moduleTitle={trainingModule.title}
               videoId={trainingModule.videoId}
+            />
+          )}
+
+          {trainingModule.canManage && (
+            <ModuleAdminDocument
+              moduleId={trainingModule.id}
+              resources={trainingModule.resources}
             />
           )}
 

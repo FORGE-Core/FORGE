@@ -64,6 +64,7 @@ function mapModuleRow(
     gradient: GRADIENTS[index % GRADIENTS.length],
     description: mod.description,
     audience: mod.audience,
+    estimatedMins: mod.estimatedMins,
     documentId: mod.documents[0]?.id ?? null,
     videoId,
     hasVideo: !!videoId,
@@ -74,6 +75,7 @@ export type OrganizationModule = ModuleCardData & {
   id: string;
   description: string | null;
   audience: string | null;
+  estimatedMins: number | null;
   documentId: string | null;
   videoId: string | null;
   hasVideo: boolean;
@@ -92,7 +94,7 @@ export async function getOrganizationModules(
         where: { type: "MANUAL" },
         take: 1,
         orderBy: { createdAt: "asc" },
-        select: { id: true },
+        select: { id: true, metadata: true },
       },
       progress: userId ? { where: { userId }, take: 1 } : false,
     },
@@ -121,9 +123,28 @@ export async function getOrganizationModules(
     }
   }
 
-  return modules.map((mod, index) =>
+  const mapped = modules.map((mod, index) =>
     mapModuleRow(mod, index, videoByModuleId.get(mod.id) ?? null, userId)
   );
+
+  const hasCustomModule = modules.some((mod) => {
+    const doc = mod.documents[0];
+    if (!doc) return true;
+    const meta = doc.metadata as { seedBundleId?: string } | null;
+    return !meta || !meta.seedBundleId;
+  });
+
+  if (hasCustomModule) {
+    return mapped.filter((m) => {
+      const originalMod = modules.find((mod) => mod.id === m.id);
+      const doc = originalMod?.documents[0];
+      if (!doc) return true;
+      const meta = doc.metadata as { seedBundleId?: string } | null;
+      return !meta || !meta.seedBundleId;
+    });
+  }
+
+  return mapped;
 }
 
 export async function listModules(ctx: OrganizationContext & { userId?: string }) {
@@ -153,8 +174,12 @@ export async function getOrganizationModuleBySlug(
   slug: string,
   userId?: string
 ) {
-  const mod = await db.trainingModule.findFirst({
-    where: { organizationId, slug, status: "PUBLISHED" },
+  const allowed = await getOrganizationModules(organizationId, userId);
+  const found = allowed.find((m) => m.slug === slug);
+  if (!found) return null;
+
+  const mod = await db.trainingModule.findUnique({
+    where: { id: found.id },
     include: {
       documents: {
         where: { type: "MANUAL" },

@@ -22,9 +22,19 @@ import { useTenant } from "@/providers/tenant-provider";
 const navItems = [
   { href: APP_ROUTES.home, label: "Inicio", icon: LayoutDashboard, exact: true },
   { href: APP_ROUTES.modules, label: "Módulos", icon: BookOpen },
-  { href: APP_ROUTES.activities, label: "Práctica", icon: Zap },
+  {
+    href: APP_ROUTES.activities,
+    label: "Práctica",
+    icon: Zap,
+    roles: ["ADMIN", "SUPERVISOR"] as const,
+  },
   { href: APP_ROUTES.chat, label: "Mentor IA", icon: Bot },
-  { href: APP_ROUTES.documents, label: "Documentos", icon: FileText },
+  {
+    href: APP_ROUTES.documents,
+    label: "Documentos",
+    icon: FileText,
+    roles: ["ADMIN", "SUPERVISOR"] as const,
+  },
   {
     href: APP_ROUTES.reports,
     label: "Reportes",

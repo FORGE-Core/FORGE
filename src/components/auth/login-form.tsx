@@ -46,6 +46,12 @@ export function LoginForm({ googleEnabled = false }: LoginFormProps) {
     }
   }, [searchParams]);
 
+  useEffect(() => {
+    if (status === "authenticated" && session?.user) {
+      router.replace(callbackUrl);
+    }
+  }, [status, session, callbackUrl, router]);
+
   async function handleSignOut() {
     setLoading(true);
     await signOut({ redirect: false });
@@ -76,42 +82,11 @@ export function LoginForm({ googleEnabled = false }: LoginFormProps) {
     router.refresh();
   }
 
-  if (status === "loading") {
+  if (status === "loading" || (status === "authenticated" && session?.user)) {
     return (
       <Card className="w-full max-w-md">
         <CardContent className="py-10 text-center text-sm text-brand-muted-gray">
-          Comprobando sesión…
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (session?.user) {
-    return (
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="font-heading text-2xl">Sesión activa</CardTitle>
-          <CardDescription>
-            Ya iniciaste sesión como{" "}
-            <strong>{session.user.email ?? session.user.name}</strong>.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-center text-sm text-brand-muted-gray">
-            Para entrar con otra cuenta, cierra sesión primero.
-          </p>
-          <Button className="w-full" asChild>
-            <Link href={callbackUrl}>Ir al dashboard</Link>
-          </Button>
-          <Button
-            type="button"
-            className="w-full"
-            variant="outline"
-            disabled={loading}
-            onClick={() => void handleSignOut()}
-          >
-            {loading ? "Cerrando…" : "Cerrar sesión"}
-          </Button>
+          {status === "authenticated" ? "Redirigiendo al panel…" : "Comprobando sesión…"}
         </CardContent>
       </Card>
     );

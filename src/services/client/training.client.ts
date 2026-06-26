@@ -28,4 +28,17 @@ export const trainingClient = {
       method: "DELETE",
     });
   },
+
+  updateModule(slug: string, body: Record<string, unknown>) {
+    return apiRequest(`/api/training-modules/${slug}`, {
+      method: "PATCH",
+      body,
+    });
+  },
+
+  deleteModule(slug: string) {
+    return apiRequest(`/api/training-modules/${slug}`, {
+      method: "DELETE",
+    });
+  },
 };

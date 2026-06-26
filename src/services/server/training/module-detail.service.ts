@@ -11,6 +11,8 @@ export type ModuleDetailData = ModuleCardData & {
   id: string;
   description: string | null;
   audience: string | null;
+  estimatedMins: number | null;
+  moduleStatus: "DRAFT" | "PUBLISHED" | "ARCHIVED";
   documentId: string | null;
   videoId: string | null;
   videoUrl: string | null;
@@ -116,6 +118,8 @@ export async function getModuleDetailForPage(
     title: result.module.title,
     description: result.module.description,
     audience: result.module.audience,
+    estimatedMins: result.module.estimatedMins,
+    moduleStatus: result.module.status,
     documentId: result.card.documentId,
     videoId: video?.id ?? null,
     videoUrl,

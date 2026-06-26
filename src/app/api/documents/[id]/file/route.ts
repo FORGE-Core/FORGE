@@ -78,8 +78,9 @@ export async function GET(
     const filename = `${safeFilename(document.title)}${ext}`;
     const isVideo = document.type === "VIDEO";
     const isImage = document.type === "IMAGE";
+    const isPdf = document.type === "PDF";
     const disposition =
-      isVideo || isImage ? "inline" : "attachment";
+      isVideo || isImage || isPdf ? "inline" : "attachment";
 
     const defaultMime = isVideo
       ? "video/mp4"

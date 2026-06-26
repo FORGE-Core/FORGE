@@ -1,9 +1,10 @@
-import { Clock, Play } from "lucide-react";
+import { Clock, Play, Edit3, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { getModuleStatusClasses } from "@/lib/training/module-status-styles";
 import { cn } from "@/lib/utils";
 
 export interface ModuleCardData {
+  id?: string;
   slug: string;
   title: string;
   category: string;
@@ -12,6 +13,9 @@ export interface ModuleCardData {
   status: "pending" | "in_progress" | "completed";
   progress: number;
   gradient: string;
+  description?: string | null;
+  audience?: string | null;
+  estimatedMins?: number | null;
   inclusionScore?: number | null;
 }
 
@@ -43,9 +47,15 @@ function ModuleProgressBar({
 export function ModuleCard({
   module,
   index = 0,
+  isAdmin = false,
+  onEdit,
+  onDelete,
 }: {
   module: ModuleCardData;
   index?: number;
+  isAdmin?: boolean;
+  onEdit?: (module: ModuleCardData) => void;
+  onDelete?: (module: ModuleCardData) => void;
 }) {
   const statusLabel =
     module.status === "completed"
@@ -69,7 +79,37 @@ export function ModuleCard({
         )}
       >
         <div className={classes.header}>
-          <span className={classes.badge}>{statusLabel}</span>
+          <div className="flex items-center justify-between mb-2">
+            <span className={classes.badge}>{statusLabel}</span>
+            {isAdmin && (
+              <div className="flex gap-1.5">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onEdit?.(module);
+                  }}
+                  className="rounded-full bg-white/20 p-1.5 text-white hover:bg-white/40 transition-colors"
+                  title="Editar Módulo"
+                >
+                  <Edit3 className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onDelete?.(module);
+                  }}
+                  className="rounded-full bg-white/20 p-1.5 text-white hover:bg-red-500/80 transition-colors"
+                  title="Eliminar Módulo"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
+          </div>
           <div>
             <p
               className={cn(
