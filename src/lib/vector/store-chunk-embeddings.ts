@@ -1,5 +1,5 @@
 import { getEmbeddingProvider } from "@/ai/providers";
-import { db } from "@/lib/db";
+import type { PrismaClient } from "@prisma/client";
 import { getEnv } from "@/lib/env";
 import { getEmbeddingDimensions } from "./dimensions";
 
@@ -19,7 +19,8 @@ function hasEmbeddingProvider(): boolean {
  */
 export async function embedDocumentChunks(
   documentId: string,
-  organizationId: string
+  organizationId: string,
+  db: PrismaClient
 ): Promise<{ embedded: number; skipped: boolean }> {
   if (!hasEmbeddingProvider()) {
     return { embedded: 0, skipped: true };

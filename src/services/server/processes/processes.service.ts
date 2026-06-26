@@ -1,5 +1,4 @@
 import { Prisma } from "@prisma/client";
-import { db } from "@/lib/db";
 import { ServiceError } from "@/services/server/errors";
 import type { AdminContext, OrganizationContext } from "@/services/server/types";
 import { assertModuleInOrganization } from "@/services/server/shared/tenant-guards";
@@ -9,10 +8,10 @@ export async function listProcesses(
   moduleId?: string | null
 ) {
   if (moduleId) {
-    await assertModuleInOrganization(moduleId, ctx.organizationId);
+    await assertModuleInOrganization(moduleId, ctx.organizationId, ctx.db);
   }
 
-  return db.process.findMany({
+  return ctx.db.process.findMany({
     where: {
       organizationId: ctx.organizationId,
       ...(moduleId ? { moduleId } : {}),
@@ -42,14 +41,14 @@ export async function createProcess(
     await assertModuleInOrganization(input.moduleId, ctx.organizationId);
   }
 
-  const count = await db.process.count({
+  const count = await ctx.db.process.count({
     where: {
       organizationId: ctx.organizationId,
       moduleId: input.moduleId ?? null,
     },
   });
 
-  return db.process.create({
+  return ctx.db.process.create({
     data: {
       organizationId: ctx.organizationId,
       moduleId: input.moduleId || null,
@@ -71,7 +70,7 @@ export async function updateProcess(
     steps?: unknown[];
   }
 ) {
-  const existing = await db.process.findFirst({
+  const existing = await ctx.db.process.findFirst({
     where: { id: processId, organizationId: ctx.organizationId },
   });
 
@@ -83,7 +82,7 @@ export async function updateProcess(
     await assertModuleInOrganization(input.moduleId, ctx.organizationId);
   }
 
-  return db.process.update({
+  return ctx.db.process.update({
     where: { id: processId },
     data: {
       title: input.title?.trim() ?? existing.title,
@@ -95,7 +94,7 @@ export async function updateProcess(
 }
 
 export async function deleteProcess(ctx: AdminContext, processId: string) {
-  const existing = await db.process.findFirst({
+  const existing = await ctx.db.process.findFirst({
     where: { id: processId, organizationId: ctx.organizationId },
   });
 
@@ -103,6 +102,6 @@ export async function deleteProcess(ctx: AdminContext, processId: string) {
     throw new ServiceError("NOT_FOUND", "Proceso no encontrado");
   }
 
-  await db.process.delete({ where: { id: processId } });
+  await ctx.db.process.delete({ where: { id: processId } });
   return { ok: true as const };
 }

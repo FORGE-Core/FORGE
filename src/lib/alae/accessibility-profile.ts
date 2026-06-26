@@ -1,4 +1,4 @@
-import type { LearningModality, LearningPace, Prisma } from "@prisma/client";
+import type { LearningModality, LearningPace, Prisma, PrismaClient } from "@prisma/client";
 import { db } from "@/lib/db";
 import { parseDeclaredNeeds } from "./declared-needs";
 import type { AccessibilityProfileData } from "./types";
@@ -44,11 +44,13 @@ export function serializeAccessibilityProfile(
 
 export async function getOrCreateAccessibilityProfile(
   userId: string,
-  organizationId: string
+  organizationId: string,
+  tenantDb?: PrismaClient
 ) {
-  let profile = await db.accessibilityProfile.findUnique({ where: { userId } });
+  const client = tenantDb ?? db;
+  let profile = await client.accessibilityProfile.findUnique({ where: { userId } });
   if (!profile) {
-    profile = await db.accessibilityProfile.create({
+    profile = await client.accessibilityProfile.create({
       data: { userId, organizationId },
     });
   }
@@ -74,10 +76,12 @@ export async function updateAccessibilityProfile(
     voiceInputEnabled: boolean;
     assistedReadingMode: boolean;
     declaredNeeds: object;
-  }>
+  }>,
+  tenantDb?: PrismaClient
 ) {
-  await getOrCreateAccessibilityProfile(userId, organizationId);
-  return db.accessibilityProfile.update({
+  const client = tenantDb ?? db;
+  await getOrCreateAccessibilityProfile(userId, organizationId, client);
+  return client.accessibilityProfile.update({
     where: { userId },
     data: {
       ...data,
@@ -91,11 +95,13 @@ export async function updateAccessibilityProfile(
 
 export async function getAlaeContextForUser(
   userId: string,
-  organizationId: string
+  organizationId: string,
+  tenantDb?: PrismaClient
 ) {
+  const client = tenantDb ?? db;
   const [accessibility, learning] = await Promise.all([
-    getOrCreateAccessibilityProfile(userId, organizationId),
-    db.learningProfile.findUnique({ where: { userId } }),
+    getOrCreateAccessibilityProfile(userId, organizationId, client),
+    client.learningProfile.findUnique({ where: { userId } }),
   ]);
 
   const { serializeLearningProfile, inferPreferredModality } = await import(

@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { announce } from "@/lib/alae/announcer";
 
 const ROUTE_LABELS: Record<string, string> = {
-  "/inicio": "Inicio",
+  "/home": "Inicio",
   "/modules": "Módulos de capacitación",
   "/activities": "Práctica",
   "/chat": "Mentor IA",

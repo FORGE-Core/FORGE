@@ -7,6 +7,7 @@ import { canViewReports } from "@/lib/auth/roles";
 import { getReportsOverview } from "@/services/server/reports";
 import { getEnrichedInclusionReport } from "@/services/server/reports/inclusion-report.service";
 import { ReportsHub } from "@/components/reports";
+import { getTenantDb } from "@/lib/db/tenant-client";
 
 export default async function ReportsPage({
   searchParams,
@@ -34,7 +35,7 @@ export default async function ReportsPage({
 
   try {
     const [overview, inclusion, patterns] = await Promise.all([
-      getReportsOverview({ organizationId, role }),
+      getReportsOverview({ organizationId, role, db: getTenantDb(organizationId) }),
       getEnrichedInclusionReport(organizationId),
       getLearningPatternReport(organizationId),
     ]);

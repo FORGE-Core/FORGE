@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+import type { PrismaClient } from "@prisma/client";
 
 export interface RetrievedChunk {
   chunkId: string;
@@ -14,10 +14,12 @@ export async function searchSimilarChunks({
   organizationId,
   embedding,
   topK = 5,
+  db,
 }: {
   organizationId: string;
   embedding: number[];
   topK?: number;
+  db: PrismaClient;
 }): Promise<RetrievedChunk[]> {
   const vectorStr = `[${embedding.join(",")}]`;
 

@@ -8,7 +8,6 @@ import {
   recordModalityUse,
   syncSupportLevelFromActivity,
 } from "@/lib/alae/learning-profile";
-import { db } from "@/lib/db";
 import { logLearningEvent } from "@/lib/learning/events";
 import { ServiceError } from "@/services/server/errors";
 import type { ServiceContext } from "@/services/server/types";
@@ -19,7 +18,7 @@ import {
 } from "@/services/server/shared/tenant-guards";
 
 export async function listConversations(ctx: ServiceContext) {
-  const conversations = await db.conversation.findMany({
+  const conversations = await ctx.db.conversation.findMany({
     where: { organizationId: ctx.organizationId, userId: ctx.userId },
     orderBy: { updatedAt: "desc" },
     take: 30,
@@ -46,7 +45,7 @@ export async function getConversation(
   ctx: ServiceContext,
   conversationId: string
 ) {
-  const conversation = await db.conversation.findFirst({
+  const conversation = await ctx.db.conversation.findFirst({
     where: {
       id: conversationId,
       organizationId: ctx.organizationId,
@@ -77,24 +76,27 @@ export async function sendMentorMessage(
     ctx.organizationId,
     ctx.userId,
     input.conversationId,
-    message
+    message,
+    ctx.db
   );
 
   const alaeContext = await getAlaeContextForUser(
     ctx.userId,
-    ctx.organizationId
+    ctx.organizationId,
+    ctx.db
   );
 
   const result = await queryRAG({
     organizationId: ctx.organizationId,
     question: message,
     alaeContext,
+    db: ctx.db,
   });
 
   const sources = await enrichRAGSources(ctx.organizationId, result.sources);
   const hasOfficialDocs = sources.length > 0;
 
-  await db.message.createMany({
+  await ctx.db.message.createMany({
     data: [
       { conversationId, role: "user", content: message },
       {
@@ -111,6 +113,7 @@ export async function sendMentorMessage(
     userId: ctx.userId,
     eventType: "CHAT_QUESTION",
     payload: { conversationId, sourceCount: sources.length },
+    db: ctx.db,
   });
 
   const confidence = hasOfficialDocs
@@ -148,12 +151,13 @@ export async function prepareMentorStream(
     ctx.organizationId,
     ctx.userId,
     input.conversationId,
-    message
+    message,
+    ctx.db
   );
 
   const [{ sources }, alaeContext] = await Promise.all([
-    prepareRAGContext(ctx.organizationId, message),
-    getAlaeContextForUser(ctx.userId, ctx.organizationId),
+    prepareRAGContext(ctx.organizationId, message, ctx.db),
+    getAlaeContextForUser(ctx.userId, ctx.organizationId, ctx.db),
   ]);
 
   const enriched = await enrichRAGSources(ctx.organizationId, sources);
@@ -173,10 +177,11 @@ export async function persistMentorStreamResult(
   await assertConversationOwnedByUser(
     input.conversationId,
     ctx.organizationId,
-    ctx.userId
+    ctx.userId,
+    ctx.db
   );
 
-  await db.message.createMany({
+  await ctx.db.message.createMany({
     data: [
       { conversationId: input.conversationId, role: "user", content: input.message },
       {
@@ -198,9 +203,10 @@ export async function persistMentorStreamResult(
         sourceCount: input.enriched.length,
         stream: true,
       },
+      db: ctx.db,
     }),
-    recordModalityUse(ctx.userId, ctx.organizationId, "READING"),
-    syncSupportLevelFromActivity(ctx.userId, ctx.organizationId),
+    recordModalityUse(ctx.userId, ctx.organizationId, ctx.db, "READING"),
+    syncSupportLevelFromActivity(ctx.userId, ctx.organizationId, ctx.db),
   ]);
 }
 

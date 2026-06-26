@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "FORGE",
     description:
       "Plataforma de capacitación empresarial con IA, accesibilidad ALAE y aprendizaje adaptativo.",
-    start_url: "/inicio",
+    start_url: "/home",
     display: "standalone",
     background_color: "#f7f6f0",
     theme_color: "#4f46e5",

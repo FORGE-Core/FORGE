@@ -16,7 +16,8 @@ export async function adaptContentForUser(
 
   const accessibility = await getOrCreateAccessibilityProfile(
     ctx.userId,
-    ctx.organizationId
+    ctx.organizationId,
+    ctx.db
   );
 
   const result = await adaptContent(body, {
@@ -35,9 +36,9 @@ export async function adaptContentForUser(
   });
 
   if (body.type === "SIMPLIFY") {
-    await recordModalityUse(ctx.userId, ctx.organizationId, "READING");
+    await recordModalityUse(ctx.userId, ctx.organizationId, ctx.db, "READING");
   } else {
-    await recordModalityUse(ctx.userId, ctx.organizationId, "VISUAL");
+    await recordModalityUse(ctx.userId, ctx.organizationId, ctx.db, "VISUAL");
   }
 
   return result;

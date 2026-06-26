@@ -17,7 +17,7 @@ export default auth((req) => {
 
 export const config = {
   matcher: [
-    "/inicio",
+    "/home",
     "/modules/:path*",
     "/activities/:path*",
     "/simulations/:path*",

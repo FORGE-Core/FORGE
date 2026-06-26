@@ -1,5 +1,7 @@
 import { db } from "@/lib/db";
 import { isAdmin, isSupervisor } from "@/lib/auth/roles";
+// db (global) is used for shared-schema tables (users)
+// ctx.db is used for tenant-schema tables
 import { generateOrgInsights } from "@/lib/analytics/insights";
 import type { OrganizationContext } from "@/services/server/types";
 import { ServiceError } from "@/services/server/errors";
@@ -27,23 +29,23 @@ export async function getReportsOverview(ctx: OrganizationContext) {
     db.user.count({
       where: { organizationId, status: "ACTIVE" },
     }),
-    db.trainingModule.count({
+    ctx.db.trainingModule.count({
       where: { organizationId, status: "PUBLISHED" },
     }),
-    db.userProgress.count({
+    ctx.db.userProgress.count({
       where: { module: { organizationId }, percentComplete: { gte: 100 } },
     }),
-    db.activityAttempt.count({
+    ctx.db.activityAttempt.count({
       where: { activity: { organizationId } },
     }),
-    db.activityAttempt.count({
+    ctx.db.activityAttempt.count({
       where: {
         activity: { organizationId },
         passed: false,
         createdAt: { gte: thirtyDaysAgo },
       },
     }),
-    db.userProgress.groupBy({
+    ctx.db.userProgress.groupBy({
       by: ["moduleId"],
       where: { module: { organizationId } },
       _avg: { percentComplete: true },
@@ -51,14 +53,14 @@ export async function getReportsOverview(ctx: OrganizationContext) {
       orderBy: { _avg: { percentComplete: "asc" } },
       take: 5,
     }),
-    db.learningEvent.groupBy({
+    ctx.db.learningEvent.groupBy({
       by: ["eventType"],
       where: { organizationId, createdAt: { gte: thirtyDaysAgo } },
       _count: true,
       orderBy: { _count: { eventType: "desc" } },
       take: 5,
     }),
-    db.inclusionAudit.findMany({
+    ctx.db.inclusionAudit.findMany({
       where: { organizationId },
       select: { overallScore: true },
       take: 100,
@@ -74,7 +76,7 @@ export async function getReportsOverview(ctx: OrganizationContext) {
         )
       : null;
 
-  const moduleTitles = await db.trainingModule.findMany({
+  const moduleTitles = await ctx.db.trainingModule.findMany({
     where: {
       organizationId,
       id: { in: weakModules.map((m) => m.moduleId) },
@@ -83,7 +85,7 @@ export async function getReportsOverview(ctx: OrganizationContext) {
   });
   const titleById = new Map(moduleTitles.map((m) => [m.id, m.title]));
 
-  const avgProgress = await db.userProgress.aggregate({
+  const avgProgress = await ctx.db.userProgress.aggregate({
     where: { module: { organizationId } },
     _avg: { percentComplete: true },
   });

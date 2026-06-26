@@ -3,7 +3,6 @@ import {
   getOrCreateLearningProfile,
   serializeLearningProfile,
 } from "@/lib/alae/learning-profile";
-import { db } from "@/lib/db";
 import { requireTenantApi } from "@/lib/api/tenant-route";
 import type { LearningModality, SupportLevel } from "@prisma/client";
 
@@ -12,8 +11,8 @@ export async function GET() {
     const tenant = await requireTenantApi();
     if (!tenant.ok) return tenant.response;
 
-    const { userId, organizationId } = tenant.ctx;
-    const profile = await getOrCreateLearningProfile(userId, organizationId);
+    const { userId, organizationId, db: tenantDb } = tenant.ctx;
+    const profile = await getOrCreateLearningProfile(userId, organizationId, tenantDb);
     return Response.json({ profile: serializeLearningProfile(profile) });
   } catch (error) {
     console.error("[learning-profile GET]", error);
@@ -29,7 +28,7 @@ export async function PATCH(req: Request) {
     const tenant = await requireTenantApi();
     if (!tenant.ok) return tenant.response;
 
-    const { userId, organizationId } = tenant.ctx;
+    const { userId, organizationId, db: tenantDb } = tenant.ctx;
 
     let body: Record<string, unknown>;
     try {
@@ -47,7 +46,7 @@ export async function PATCH(req: Request) {
         examples?: boolean;
         simulations?: boolean;
       };
-      await applyWizardToProfiles(userId, organizationId, {
+      await applyWizardToProfiles(userId, organizationId, tenantDb, {
         preferredModality: w.preferredModality ?? "MIXED",
         stepByStep: w.stepByStep ?? false,
         simplified: w.simplified ?? false,
@@ -55,12 +54,12 @@ export async function PATCH(req: Request) {
         examples: w.examples ?? false,
         simulations: w.simulations ?? false,
       });
-      const profile = await getOrCreateLearningProfile(userId, organizationId);
+      const profile = await getOrCreateLearningProfile(userId, organizationId, tenantDb);
       return Response.json({ profile: serializeLearningProfile(profile) });
     }
 
-    await getOrCreateLearningProfile(userId, organizationId);
-    const profile = await db.learningProfile.update({
+    await getOrCreateLearningProfile(userId, organizationId, tenantDb);
+    const profile = await tenantDb.learningProfile.update({
       where: { userId },
       data: {
         supportLevel: body.supportLevel as SupportLevel | undefined,

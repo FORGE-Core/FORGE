@@ -23,12 +23,13 @@ export async function POST(
       return NextResponse.json({ error: "Opción requerida" }, { status: 400 });
     }
 
-    const { organizationId, userId } = tenant.ctx;
+    const { organizationId, userId, db: tenantDb } = tenant.ctx;
     const { score, passed } = await submitActivityAttempt({
       userId,
       organizationId,
       activityId: id,
       answers: { selectedId },
+      db: tenantDb,
     });
 
     await Promise.all([
@@ -37,9 +38,10 @@ export async function POST(
         userId,
         eventType: "SIMULATION_COMPLETED",
         payload: { activityId: id, score, passed },
+        db: tenantDb,
       }),
-      recordModalityUse(userId, organizationId, "PRACTICE"),
-      syncSupportLevelFromActivity(userId, organizationId),
+      recordModalityUse(userId, organizationId, tenantDb, "PRACTICE"),
+      syncSupportLevelFromActivity(userId, organizationId, tenantDb),
     ]);
 
     return NextResponse.json({ score, passed });

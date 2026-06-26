@@ -8,7 +8,7 @@ export async function POST(req: Request) {
   const tenant = await requireTenantApi();
   if (!tenant.ok) return tenant.response;
 
-  const { userId, organizationId, role } = tenant.ctx;
+  const { userId, organizationId, role, db } = tenant.ctx;
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0] ?? null;
 
   const guard = checkApiRateLimit(userId, ip, 30);
@@ -23,7 +23,7 @@ export async function POST(req: Request) {
 
   try {
     const result = await adaptContentForUser(
-      { organizationId, userId, role },
+      { organizationId, userId, role, db },
       body
     );
     return Response.json(result);

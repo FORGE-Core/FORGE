@@ -10,7 +10,7 @@ export default async function SettingsPage() {
   if (!organizationId) redirect("/login");
 
   const org = await getOrganizationSettings(organizationId);
-  if (!org) redirect("/inicio");
+  if (!org) redirect("/home");
 
   return <SettingsContent initialOrg={org} />;
 }

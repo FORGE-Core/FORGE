@@ -12,8 +12,8 @@ export async function GET() {
     const tenant = await requireTenantApi();
     if (!tenant.ok) return tenant.response;
 
-    const { userId, organizationId } = tenant.ctx;
-    const profile = await getOrCreateAccessibilityProfile(userId, organizationId);
+    const { userId, organizationId, db: tenantDb } = tenant.ctx;
+    const profile = await getOrCreateAccessibilityProfile(userId, organizationId, tenantDb);
     return Response.json({ profile: serializeAccessibilityProfile(profile) });
   } catch (error) {
     console.error("[accessibility/profile GET]", error);
@@ -29,7 +29,7 @@ export async function PATCH(req: Request) {
     const tenant = await requireTenantApi();
     if (!tenant.ok) return tenant.response;
 
-    const { userId, organizationId } = tenant.ctx;
+    const { userId, organizationId, db: tenantDb } = tenant.ctx;
 
     let body: Record<string, unknown>;
     try {
@@ -77,7 +77,7 @@ export async function PATCH(req: Request) {
         typeof body.declaredNeeds === "object" && body.declaredNeeds
           ? (body.declaredNeeds as object)
           : undefined,
-    });
+    }, tenantDb);
 
     await logAccessibilityEvent({
       organizationId,

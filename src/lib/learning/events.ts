@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import type { PrismaClient } from "@prisma/client";
 import { logAccessibilityEvent } from "@/lib/alae/events";
 import { notifyLearningEvent } from "@/lib/notifications/push";
 
@@ -51,14 +52,17 @@ export async function logLearningEvent({
   userId,
   eventType,
   payload,
+  db: tenantDb,
 }: {
   organizationId: string;
   userId: string;
   eventType: string;
   payload: Record<string, unknown>;
+  db?: PrismaClient;
 }) {
+  const client = tenantDb ?? db;
   try {
-    await db.learningEvent.create({
+    await client.learningEvent.create({
       data: {
         organizationId,
         userId,

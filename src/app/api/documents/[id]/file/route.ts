@@ -36,9 +36,9 @@ export async function GET(
     const tenant = await requireTenantApi();
     if (!tenant.ok) return tenant.response;
 
-    const { organizationId, role } = tenant.ctx;
+    const { organizationId, role, db } = tenant.ctx;
     const { id } = await params;
-    const document = await getOrganizationDocument(id, organizationId);
+    const document = await getOrganizationDocument(id, organizationId, db);
 
     if (!document?.fileUrl) {
       return NextResponse.json(

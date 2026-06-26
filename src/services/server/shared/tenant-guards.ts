@@ -1,9 +1,11 @@
-import { db } from "@/lib/db";
+import type { PrismaClient } from "@prisma/client";
+import { db as globalDb } from "@/lib/db";
 import { ServiceError } from "@/services/server/errors";
 
 export async function assertModuleInOrganization(
   moduleId: string,
-  organizationId: string
+  organizationId: string,
+  db: PrismaClient = globalDb
 ) {
   const mod = await db.trainingModule.findFirst({
     where: { id: moduleId, organizationId },
@@ -20,7 +22,8 @@ export async function assertModuleInOrganization(
 
 export async function assertDocumentInOrganization(
   documentId: string,
-  organizationId: string
+  organizationId: string,
+  db: PrismaClient = globalDb
 ) {
   const doc = await db.document.findFirst({
     where: { id: documentId, organizationId },
@@ -34,7 +37,8 @@ export async function assertDocumentInOrganization(
 export async function assertConversationOwnedByUser(
   conversationId: string,
   organizationId: string,
-  userId: string
+  userId: string,
+  db: PrismaClient = globalDb
 ) {
   const conversation = await db.conversation.findFirst({
     where: { id: conversationId, organizationId, userId },
@@ -50,14 +54,11 @@ export async function resolveOrCreateConversation(
   organizationId: string,
   userId: string,
   conversationId: string | undefined,
-  title: string
+  title: string,
+  db: PrismaClient = globalDb
 ) {
   if (conversationId) {
-    await assertConversationOwnedByUser(
-      conversationId,
-      organizationId,
-      userId
-    );
+    await assertConversationOwnedByUser(conversationId, organizationId, userId, db);
     return conversationId;
   }
 

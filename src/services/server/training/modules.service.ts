@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import type { PrismaClient } from "@prisma/client";
 import { formatDuration } from "@/lib/training/format";
 import type { ModuleCardData } from "@/components/modules/module-card";
 import { getLatestInclusionScores } from "@/lib/alae/inclusion-scorer";
@@ -84,9 +85,11 @@ export type OrganizationModule = ModuleCardData & {
 
 export async function getOrganizationModules(
   organizationId: string,
-  userId?: string
+  userId?: string,
+  tenantDb?: PrismaClient
 ): Promise<OrganizationModule[]> {
-  const modules = await db.trainingModule.findMany({
+  const client = tenantDb ?? db;
+  const modules = await client.trainingModule.findMany({
     where: { organizationId, status: "PUBLISHED" },
     orderBy: { orderIndex: "asc" },
     include: {
@@ -103,7 +106,7 @@ export async function getOrganizationModules(
   const moduleIds = modules.map((m) => m.id);
   const videos =
     moduleIds.length > 0
-      ? await db.document.findMany({
+      ? await client.document.findMany({
           where: {
             organizationId,
             moduleId: { in: moduleIds },
@@ -150,7 +153,8 @@ export async function getOrganizationModules(
 export async function listModules(ctx: OrganizationContext & { userId?: string }) {
   const modules = await getOrganizationModules(
     ctx.organizationId,
-    ctx.userId
+    ctx.userId,
+    ctx.db
   );
 
   if (!isAdmin(ctx.role)) {
@@ -172,13 +176,15 @@ export async function listModules(ctx: OrganizationContext & { userId?: string }
 export async function getOrganizationModuleBySlug(
   organizationId: string,
   slug: string,
-  userId?: string
+  userId?: string,
+  tenantDb?: PrismaClient
 ) {
-  const allowed = await getOrganizationModules(organizationId, userId);
+  const client = tenantDb ?? db;
+  const allowed = await getOrganizationModules(organizationId, userId, client);
   const found = allowed.find((m) => m.slug === slug);
   if (!found) return null;
 
-  const mod = await db.trainingModule.findUnique({
+  const mod = await client.trainingModule.findUnique({
     where: { id: found.id },
     include: {
       documents: {
@@ -193,7 +199,7 @@ export async function getOrganizationModuleBySlug(
 
   if (!mod) return null;
 
-  const video = await db.document.findFirst({
+  const video = await client.document.findFirst({
     where: {
       organizationId,
       moduleId: mod.id,
@@ -234,18 +240,18 @@ export async function createModule(
   let slug = baseSlug;
   let suffix = 1;
   while (
-    await db.trainingModule.findFirst({
+    await ctx.db.trainingModule.findFirst({
       where: { organizationId: ctx.organizationId, slug },
     })
   ) {
     slug = `${baseSlug}-${suffix++}`;
   }
 
-  const count = await db.trainingModule.count({
+  const count = await ctx.db.trainingModule.count({
     where: { organizationId: ctx.organizationId },
   });
 
-  return db.trainingModule.create({
+  return ctx.db.trainingModule.create({
     data: {
       organizationId: ctx.organizationId,
       slug,

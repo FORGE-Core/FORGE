@@ -3,7 +3,6 @@
 import { Suspense } from "react";
 import { SessionProvider } from "next-auth/react";
 import { AccessibilityProvider } from "@/components/alae/accessibility-provider";
-import { AssistedReadingAutoEnable } from "@/components/alae/assisted-reading-auto-enable";
 import { FocusReadAloud } from "@/components/alae/focus-read-aloud";
 import { AssistedReadingRouteReader } from "@/components/alae/assisted-reading-route-reader";
 import { AssistedReadingShortcut } from "@/components/alae/assisted-reading-shortcut";
@@ -22,7 +21,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <RouteAnnouncer />
         <AssistedReadingShortcut />
         <Suspense fallback={null}>
-          <AssistedReadingAutoEnable />
           <AssistedReadingRouteReader />
           <FocusReadAloud />
         </Suspense>

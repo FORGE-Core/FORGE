@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { LoginForm } from "@/components/auth/login-form";
 import { AssistedReadingAutoEnable } from "@/components/alae/assisted-reading-auto-enable";
+import { ResetVoiceOnNormalLogin } from "@/components/alae/reset-voice-on-normal-login";
 
 export default function LoginPage() {
   const googleEnabled = !!(
@@ -15,6 +16,7 @@ export default function LoginPage() {
     >
       <Suspense fallback={null}>
         <AssistedReadingAutoEnable />
+        <ResetVoiceOnNormalLogin />
       </Suspense>
 
       <div className="w-full max-w-md space-y-6">

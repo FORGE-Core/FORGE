@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { getProfileData } from "@/services/server/profile";
 import { getOrganizationName } from "@/services/server/organization";
 import { ProfileView } from "@/components/profile";
+import { getTenantDb } from "@/lib/db/tenant-client";
 
 export default async function ProfilePage() {
   const session = await auth();
@@ -14,7 +15,7 @@ export default async function ProfilePage() {
 
   const orgName = await getOrganizationName(organizationId);
   const profile = await getProfileData(
-    { organizationId, userId, role },
+    { organizationId, userId, role, db: getTenantDb(organizationId) },
     {
       name: session.user.name ?? null,
       email: session.user.email ?? "",

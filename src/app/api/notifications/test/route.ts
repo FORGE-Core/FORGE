@@ -8,7 +8,7 @@ export async function POST() {
   const result = await sendPushToUser(tenant.ctx.userId, {
     title: "FORGE — Prueba",
     body: "Las notificaciones push funcionan correctamente.",
-    url: "/inicio",
+    url: "/home",
     tag: "test",
   });
 

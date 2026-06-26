@@ -1,6 +1,6 @@
 /** Rutas de la app autenticada (sin prefijo /dashboard). */
 export const APP_ROUTES = {
-  home: "/inicio",
+  home: "/home",
   modules: "/modules",
   module: (slug: string) => `/modules/${slug}`,
   activities: "/activities",
@@ -18,7 +18,7 @@ export const APP_ROUTES = {
 
 /** Rutas protegidas que requieren sesión. */
 export const PROTECTED_PREFIXES = [
-  "/inicio",
+  "/home",
   "/modules",
   "/activities",
   "/chat",

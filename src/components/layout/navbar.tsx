@@ -2,7 +2,6 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function Navbar() {
@@ -25,18 +24,6 @@ export function Navbar() {
           </Link>
         </nav>
         <div className="flex items-center gap-2 sm:gap-3">
-          <div className="hidden lg:block">
-          <Link
-            href="/accesible"
-            className="inline-flex items-center gap-1.5 rounded-full border border-brand-cobalt/30 px-3 py-1.5 text-xs font-medium text-brand-cobalt hover:bg-brand-champagne/50"
-          >
-            <Volume2 className="h-3.5 w-3.5" aria-hidden />
-            Lectura por voz
-          </Link>
-        </div>
-          <Button variant="ghost" asChild>
-            <Link href="/login">Iniciar sesión</Link>
-          </Button>
           <Button asChild>
             <Link href="/register">Comenzar gratis</Link>
           </Button>

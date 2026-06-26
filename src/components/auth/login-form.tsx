@@ -30,7 +30,7 @@ export function LoginForm({ googleEnabled = false }: LoginFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session, status } = useSession();
-  const callbackUrl = searchParams.get("callbackUrl") ?? "/inicio";
+  const callbackUrl = searchParams.get("callbackUrl") ?? "/home";
   const authError = searchParams.get("error");
   const [error, setError] = useState<string | null>(
     authError ? AUTH_ERRORS[authError] ?? "No se pudo iniciar sesión" : null

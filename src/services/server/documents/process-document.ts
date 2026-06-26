@@ -1,5 +1,5 @@
 import { chunkText } from "@/ai/rag/chunker";
-import { db } from "@/lib/db";
+import type { PrismaClient } from "@prisma/client";
 import { embedDocumentChunks } from "@/lib/vector/store-chunk-embeddings";
 import { extractText, getDocumentProxy } from "unpdf";
 
@@ -22,10 +22,12 @@ export async function processDocumentContent({
   organizationId,
   documentId,
   text,
+  db,
 }: {
   organizationId: string;
   documentId: string;
   text: string;
+  db: PrismaClient;
 }) {
   const chunks = chunkText(text);
 
@@ -59,7 +61,7 @@ export async function processDocumentContent({
   // Embeddings e inclusión en background — no bloquean la respuesta al cliente
   void (async () => {
     try {
-      const { embedded, skipped } = await embedDocumentChunks(documentId, organizationId);
+      const { embedded, skipped } = await embedDocumentChunks(documentId, organizationId, db);
       if (!skipped && embedded > 0) {
         await db.document.update({
           where: { id: documentId },
@@ -87,6 +89,7 @@ export async function processDocumentContent({
         targetType: "DOCUMENT",
         targetId: documentId,
         result,
+        db,
       });
     } catch (err) {
       console.warn("[ALAE] inclusion audit omitido:", err);

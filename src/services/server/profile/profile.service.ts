@@ -1,4 +1,3 @@
-import { db } from "@/lib/db";
 import { getOrganizationModules } from "@/services/server/training/modules.service";
 import type { ServiceContext } from "@/services/server/types";
 
@@ -19,13 +18,14 @@ export async function getProfileData(
 ) {
   const modules = await getOrganizationModules(
     ctx.organizationId,
-    ctx.userId
+    ctx.userId,
+    ctx.db
   );
   const completed = modules.filter((m) => m.status === "completed").length;
-  const attemptCount = await db.activityAttempt.count({
+  const attemptCount = await ctx.db.activityAttempt.count({
     where: { userId: ctx.userId },
   });
-  const simCount = await db.activityAttempt.count({
+  const simCount = await ctx.db.activityAttempt.count({
     where: {
       userId: ctx.userId,
       activity: { type: "CASE_STUDY" },

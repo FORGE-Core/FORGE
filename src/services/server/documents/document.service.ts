@@ -6,7 +6,6 @@ import {
 import { getLatestInclusionScores } from "@/lib/alae/inclusion-scorer";
 import { deleteStoredFile, readStoredFile, saveOrganizationFile } from "@/lib/storage";
 import { buildDocumentDeliveryUrl } from "@/lib/storage/delivery-url";
-import { db } from "@/lib/db";
 import { logLearningEvent } from "@/lib/learning/events";
 import { generateLearningContentFromDocument } from "@/services/server/ai/generate-learning-content";
 import { ServiceError } from "@/services/server/errors";
@@ -91,19 +90,20 @@ function videoExtension(file: File): string {
 
 export async function getOrganizationDocument(
   documentId: string,
-  organizationId: string
+  organizationId: string,
+  tenantDb: import("@prisma/client").PrismaClient
 ) {
-  return db.document.findFirst({
+  return tenantDb.document.findFirst({
     where: { id: documentId, organizationId },
   });
 }
 
 export async function listDocuments(ctx: OrganizationContext) {
-  const { organizationId, role } = ctx;
+  const { organizationId, role, db: tenantDb } = ctx;
   const admin = isAdmin(role);
   const canManage = canManageDocuments(role);
 
-  const documents = await db.document.findMany({
+  const documents = await tenantDb.document.findMany({
     where: admin
       ? { organizationId }
       : {
@@ -192,7 +192,7 @@ export async function uploadDocument(
   }
 
   if (input.moduleId) {
-    await assertModuleInOrganization(input.moduleId, ctx.organizationId);
+    await assertModuleInOrganization(input.moduleId, ctx.organizationId, ctx.db);
   }
 
   const buffer = Buffer.from(await input.file.arrayBuffer());
@@ -202,7 +202,8 @@ export async function uploadDocument(
     input.file.name.replace(/\.[^.]+$/, "").trim() || "Sin título";
   const title = input.title?.trim() || defaultTitle;
 
-  const document = await db.document.create({
+  const tenantDb = ctx.db;
+  const document = await tenantDb.document.create({
     data: {
       organizationId: ctx.organizationId,
       title,
@@ -225,7 +226,7 @@ export async function uploadDocument(
       input.file.type || undefined
     );
 
-    await db.document.update({
+    await tenantDb.document.update({
       where: { id: document.id },
       data: { fileUrl: relativePath },
     });
@@ -238,6 +239,7 @@ export async function uploadDocument(
         organizationId: ctx.organizationId,
         documentId: document.id,
         text,
+        db: tenantDb,
       });
 
       const autoGenerate = input.autoGenerate !== false;
@@ -260,6 +262,7 @@ export async function uploadDocument(
                 items: gen.created,
                 auto: true,
               },
+              db: tenantDb,
             });
           } catch (genErr) {
             console.warn("[documents] auto-generación omitida:", genErr);
@@ -267,7 +270,7 @@ export async function uploadDocument(
         })();
       }
     } else if (video || image) {
-      await db.document.update({
+      await tenantDb.document.update({
         where: { id: document.id },
         data: {
           status: "READY",
@@ -282,7 +285,7 @@ export async function uploadDocument(
       });
     }
 
-    const updated = await db.document.findUnique({
+    const updated = await tenantDb.document.findUnique({
       where: { id: document.id },
       include: { _count: { select: { chunks: true } } },
     });
@@ -301,7 +304,7 @@ export async function uploadDocument(
     };
   } catch (processError) {
     console.error("[documents upload]", processError);
-    await db.document.update({
+    await tenantDb.document.update({
       where: { id: document.id },
       data: { status: "FAILED" },
     });
@@ -318,7 +321,8 @@ export async function uploadDocument(
 export async function deleteDocument(ctx: AdminContext, documentId: string) {
   const document = await getOrganizationDocument(
     documentId,
-    ctx.organizationId
+    ctx.organizationId,
+    ctx.db
   );
   if (!document) {
     throw new ServiceError("NOT_FOUND", "Documento no encontrado");
@@ -328,14 +332,15 @@ export async function deleteDocument(ctx: AdminContext, documentId: string) {
     await deleteStoredFile(document.fileUrl);
   }
 
-  await db.document.delete({ where: { id: document.id } });
+  await ctx.db.document.delete({ where: { id: document.id } });
   return { ok: true as const };
 }
 
 export async function reprocessDocument(ctx: AdminContext, documentId: string) {
   const document = await getOrganizationDocument(
     documentId,
-    ctx.organizationId
+    ctx.organizationId,
+    ctx.db
   );
 
   if (!document?.fileUrl) {
@@ -349,7 +354,7 @@ export async function reprocessDocument(ctx: AdminContext, documentId: string) {
     );
   }
 
-  await db.document.update({
+  await ctx.db.document.update({
     where: { id: documentId },
     data: { status: "PROCESSING" },
   });
@@ -361,6 +366,7 @@ export async function reprocessDocument(ctx: AdminContext, documentId: string) {
     organizationId: ctx.organizationId,
     documentId,
     text,
+    db: ctx.db,
   });
 
   return { chunkCount, status: "READY" as const };
@@ -373,14 +379,15 @@ export async function generateDocumentLearningContent(
 ) {
   const document = await getOrganizationDocument(
     documentId,
-    ctx.organizationId
+    ctx.organizationId,
+    ctx.db
   );
   if (!document) {
     throw new ServiceError("NOT_FOUND", "Documento no encontrado");
   }
 
   if (moduleId) {
-    await assertModuleInOrganization(moduleId, ctx.organizationId);
+    await assertModuleInOrganization(moduleId, ctx.organizationId, ctx.db);
   }
 
   const result = await generateLearningContentFromDocument({
@@ -398,6 +405,7 @@ export async function generateDocumentLearningContent(
       moduleId: result.moduleId,
       items: result.created,
     },
+    db: ctx.db,
   });
 
   return result;

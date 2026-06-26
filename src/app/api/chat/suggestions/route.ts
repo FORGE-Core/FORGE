@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { getAlaeContextForUser } from "@/lib/alae/accessibility-profile";
-import { db } from "@/lib/db";
 import { requireTenantApi } from "@/lib/api/tenant-route";
 
 const DEFAULT_SUGGESTIONS = [
@@ -15,23 +14,23 @@ export async function GET() {
     const tenant = await requireTenantApi();
     if (!tenant.ok) return tenant.response;
 
-    const { organizationId, userId } = tenant.ctx;
+    const { organizationId, userId, db: tenantDb } = tenant.ctx;
 
     const [docs, processes, alae] = await Promise.all([
-      db.document.findMany({
+      tenantDb.document.findMany({
         where: { organizationId, status: "READY" },
         select: { title: true },
         take: 4,
         orderBy: { createdAt: "desc" },
       }),
-      db.process.findMany({
+      tenantDb.process.findMany({
         where: { organizationId },
         select: { title: true },
         take: 5,
         orderBy: { orderIndex: "asc" },
       }),
       userId
-        ? getAlaeContextForUser(userId, organizationId)
+        ? getAlaeContextForUser(userId, organizationId, tenantDb)
         : Promise.resolve(null),
     ]);
 
@@ -54,7 +53,7 @@ export async function GET() {
       suggestions.push("Guíame paso a paso el procedimiento");
     }
 
-    const modules = await db.trainingModule.findMany({
+    const modules = await tenantDb.trainingModule.findMany({
       where: { organizationId, status: "PUBLISHED" },
       select: { title: true },
       take: 1,

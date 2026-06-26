@@ -15,7 +15,7 @@ export async function POST(req: Request) {
   const tenant = await requireTenantApi();
   if (!tenant.ok) return tenant.response;
 
-  const { userId, organizationId } = tenant.ctx;
+  const { userId, organizationId, db: tenantDb } = tenant.ctx;
 
   let body: { modality?: string; source?: string };
   try {
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     return Response.json({ error: "modality inválida" }, { status: 400 });
   }
 
-  await recordModalityUse(userId, organizationId, modality);
+  await recordModalityUse(userId, organizationId, tenantDb, modality);
   await logAccessibilityEvent({
     organizationId,
     userId,

@@ -15,7 +15,7 @@ export async function POST(req: Request) {
   const tenant = await requireTenantSession();
   if (!tenant.ok) return tenantAuthJsonError(tenant);
 
-  const { userId, organizationId, role } = tenant.ctx;
+  const { userId, organizationId, role, db } = tenant.ctx;
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0] ?? null;
 
   const guard = checkApiRateLimit(userId, ip, 40);
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
     return Response.json({ error: "Cuerpo JSON inválido" }, { status: 400 });
   }
 
-  const ctx = { organizationId, userId, role };
+  const ctx = { organizationId, userId, role, db };
 
   let setup: Awaited<ReturnType<typeof prepareMentorStream>>;
   try {
@@ -63,6 +63,7 @@ export async function POST(req: Request) {
           organizationId,
           question: setup.message,
           alaeContext: setup.alaeContext,
+          db,
         })) {
           fullAnswer += chunk;
           send("token", { text: chunk });

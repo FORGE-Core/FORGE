@@ -1,13 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
 import { announce } from "@/lib/alae/announcer";
 import { getReadableLabel } from "@/lib/alae/read-element";
 import { isSpeechUnlocked, speakNow, stopSpeaking } from "@/lib/alae/speech";
 import { useAccessibility } from "./accessibility-provider";
-
-const AUTH_PATHS = new Set(["/login", "/register"]);
 
 function shouldSkipFocusTarget(target: Element): boolean {
   if (target.closest('[aria-label="Controles de lectura asistida"]')) return true;
@@ -22,7 +19,6 @@ function shouldSkipFocusTarget(target: Element): boolean {
 
 /** Lee en voz alta el elemento enfocado con Tab. */
 export function FocusReadAloud() {
-  const pathname = usePathname();
   const { assistedReadingMode } = useAccessibility();
   const [unlocked, setUnlocked] = useState(false);
   const lastTargetRef = useRef<Element | null>(null);
@@ -35,8 +31,7 @@ export function FocusReadAloud() {
     return () => window.removeEventListener("alae-speech-unlocked", onUnlock);
   }, []);
 
-  const enabled =
-    unlocked && (assistedReadingMode || AUTH_PATHS.has(pathname));
+  const enabled = unlocked && assistedReadingMode;
 
   useEffect(() => {
     if (!enabled) {

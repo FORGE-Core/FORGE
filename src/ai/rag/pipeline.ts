@@ -2,6 +2,7 @@ import { getAIProvider, getEmbeddingProvider } from "@/ai/providers";
 import { buildNovaSystemAugmentation } from "@/lib/alae/prompts";
 import type { AlaeContext } from "@/lib/alae/types";
 import { db } from "@/lib/db";
+import type { PrismaClient } from "@prisma/client";
 import { getEnv } from "@/lib/env";
 import { chunkText } from "./chunker";
 import { searchSimilarChunks } from "./retriever";
@@ -206,6 +207,7 @@ export interface RAGQueryInput {
   question: string;
   topK?: number;
   alaeContext?: AlaeContext | null;
+  db?: PrismaClient;
 }
 
 export interface RAGResponse {
@@ -218,8 +220,10 @@ export async function queryRAG({
   question,
   topK = 5,
   alaeContext,
+  db: tenantDb,
 }: RAGQueryInput): Promise<RAGResponse> {
   const provider = getAIProvider();
+  const client = tenantDb ?? db;
   let sources: RAGResponse["sources"] = [];
   let context =
     "Aún no hay documentos indexados para esta organización. Responde de forma general y útil sobre capacitación empresarial.";
@@ -235,6 +239,7 @@ export async function queryRAG({
         organizationId,
         embedding: queryEmbedding,
         topK,
+        db: client,
       });
 
       if (sources.length > 0) {
@@ -246,7 +251,7 @@ export async function queryRAG({
       console.warn("[RAG] embeddings/búsqueda omitidos:", err);
     }
   } else {
-    const chunks = await db.documentChunk.findMany({
+    const chunks = await client.documentChunk.findMany({
       where: { organizationId },
       take: topK,
       orderBy: { createdAt: "desc" },

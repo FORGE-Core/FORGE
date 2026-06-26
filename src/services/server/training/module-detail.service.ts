@@ -1,7 +1,6 @@
-import type { UserRole } from "@prisma/client";
+import type { PrismaClient, UserRole } from "@prisma/client";
 import { getLatestInclusionScores } from "@/lib/alae/inclusion-scorer";
 import { canManageDocuments } from "@/lib/auth/roles";
-import { db } from "@/lib/db";
 import type { ModuleCardData } from "@/components/modules/module-card";
 import { getOrganizationModuleBySlug } from "@/lib/training/modules";
 import { getModuleVideo } from "@/services/server/documents/upload-module-video";
@@ -35,9 +34,10 @@ export async function getModuleDetailForPage(
   organizationId: string,
   userId: string,
   role: UserRole,
-  slug: string
+  slug: string,
+  tenantDb?: PrismaClient
 ): Promise<ModuleDetailData | null> {
-  const result = await getOrganizationModuleBySlug(organizationId, slug, userId);
+  const result = await getOrganizationModuleBySlug(organizationId, slug, userId, tenantDb);
   if (!result) return null;
 
   const moduleId = result.module.id;
@@ -46,19 +46,23 @@ export async function getModuleDetailForPage(
   const [video, inclusionScores, processes, moduleDocuments] = await Promise.all([
     getModuleVideo(organizationId, moduleId),
     getLatestInclusionScores(organizationId, "MODULE", [moduleId]),
-    db.process.findMany({
-      where: { organizationId, moduleId },
-      orderBy: { orderIndex: "asc" },
-      select: { id: true, title: true, description: true, steps: true },
-    }),
-    db.document.findMany({
-      where: {
-        organizationId,
-        moduleId,
-        status: "READY",
-      },
-      select: { id: true, title: true, type: true },
-    }),
+    tenantDb
+      ? tenantDb.process.findMany({
+          where: { organizationId, moduleId },
+          orderBy: { orderIndex: "asc" },
+          select: { id: true, title: true, description: true, steps: true },
+        })
+      : Promise.resolve([]),
+    tenantDb
+      ? tenantDb.document.findMany({
+          where: {
+            organizationId,
+            moduleId,
+            status: "READY",
+          },
+          select: { id: true, title: true, type: true },
+        })
+      : Promise.resolve([]),
   ]);
 
   const inclusion = inclusionScores.get(moduleId);

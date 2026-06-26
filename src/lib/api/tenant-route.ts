@@ -36,6 +36,7 @@ export async function requireTenantApi(): Promise<TenantApiOk | TenantApiFail> {
   if (!tenant.ok) {
     return { ok: false, response: tenantAuthError(tenant) };
   }
+  // ctx ya incluye db (getTenantDb) desde buildServiceContext
   return { ok: true, session: tenant.session, ctx: tenant.ctx };
 }
 

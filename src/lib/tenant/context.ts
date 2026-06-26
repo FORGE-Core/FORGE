@@ -7,6 +7,7 @@ import type {
 } from "@/services/server/types";
 import { ServiceError } from "@/services/server/errors";
 import { isAdmin } from "@/lib/auth/roles";
+import { getTenantDb } from "@/lib/db/tenant-client";
 
 export function buildServiceContext(session: Session): ServiceContext {
   const userId = session.user?.id;
@@ -17,7 +18,7 @@ export function buildServiceContext(session: Session): ServiceContext {
     throw new ServiceError("UNAUTHORIZED", "Sesión incompleta");
   }
 
-  return { userId, organizationId, role };
+  return { userId, organizationId, role, db: getTenantDb(organizationId) };
 }
 
 export function buildOrganizationContext(
@@ -30,6 +31,7 @@ export function buildOrganizationContext(
   return {
     organizationId,
     role: session.user?.role,
+    db: getTenantDb(organizationId),
   };
 }
 

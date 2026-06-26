@@ -1,4 +1,3 @@
-import { db } from "@/lib/db";
 import {
   parseErrorDetectionContent,
   parseOrderStepsContent,
@@ -97,7 +96,7 @@ export async function getActivityAtIndex(
   const index = Math.max(0, input.index ?? 0);
 
   if (input.moduleId) {
-    const mod = await db.trainingModule.findFirst({
+    const mod = await ctx.db.trainingModule.findFirst({
       where: {
         id: input.moduleId,
         organizationId: ctx.organizationId,
@@ -116,8 +115,8 @@ export async function getActivityAtIndex(
   };
 
   const [total, activities] = await Promise.all([
-    db.activity.count({ where }),
-    db.activity.findMany({
+    ctx.db.activity.count({ where }),
+    ctx.db.activity.findMany({
       where,
       include: {
         module: { select: { title: true, slug: true } },
@@ -153,14 +152,16 @@ export async function submitActivityAttempt({
   activityId,
   answers,
   timeSecs,
+  db: tenantDb,
 }: {
   userId: string;
   organizationId: string;
   activityId: string;
   answers: { selectedId?: string; order?: string[] };
   timeSecs?: number;
+  db: import("@prisma/client").PrismaClient;
 }) {
-  const activity = await db.activity.findFirst({
+  const activity = await tenantDb.activity.findFirst({
     where: { id: activityId, organizationId },
     include: { module: true },
   });
@@ -200,7 +201,7 @@ export async function submitActivityAttempt({
     score = passed ? 100 : 0;
   }
 
-  const attempt = await db.activityAttempt.create({
+  const attempt = await tenantDb.activityAttempt.create({
     data: {
       userId,
       activityId,
@@ -212,7 +213,7 @@ export async function submitActivityAttempt({
   });
 
   if (activity.moduleId) {
-    const prev = await db.userProgress.findUnique({
+    const prev = await tenantDb.userProgress.findUnique({
       where: {
         userId_moduleId: { userId, moduleId: activity.moduleId },
       },
@@ -221,7 +222,7 @@ export async function submitActivityAttempt({
       ? Math.min(100, (prev?.percentComplete ?? 0) + 25)
       : (prev?.percentComplete ?? 0);
 
-    await db.userProgress.upsert({
+    await tenantDb.userProgress.upsert({
       where: {
         userId_moduleId: { userId, moduleId: activity.moduleId },
       },

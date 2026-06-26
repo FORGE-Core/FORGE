@@ -1,5 +1,6 @@
 import { getAIProvider } from "@/ai/providers";
 import { db } from "@/lib/db";
+import type { PrismaClient } from "@prisma/client";
 import type { InclusionAuditResult } from "./types";
 
 function heuristicScore(text: string): InclusionAuditResult {
@@ -133,13 +134,16 @@ export async function saveInclusionAudit({
   targetType,
   targetId,
   result,
+  db: tenantDb,
 }: {
   organizationId: string;
   targetType: string;
   targetId: string;
   result: InclusionAuditResult;
+  db?: PrismaClient;
 }) {
-  return db.inclusionAudit.create({
+  const client = tenantDb ?? db;
+  return client.inclusionAudit.create({
     data: {
       organizationId,
       targetType,
@@ -156,17 +160,19 @@ export async function saveInclusionAudit({
 export async function getLatestInclusionScores(
   organizationId: string,
   targetType: string,
-  targetIds: string[]
+  targetIds: string[],
+  tenantDb?: PrismaClient
 ): Promise<
   Map<string, { score: number; issues: string[]; recommendations: string[] }>
 > {
+  const client = tenantDb ?? db;
   const map = new Map<
     string,
     { score: number; issues: string[]; recommendations: string[] }
   >();
   if (targetIds.length === 0) return map;
 
-  const audits = await db.inclusionAudit.findMany({
+  const audits = await client.inclusionAudit.findMany({
     where: {
       organizationId,
       targetType,
@@ -190,8 +196,9 @@ export async function getLatestInclusionScores(
   return map;
 }
 
-export async function getInclusionReport(organizationId: string) {
-  const audits = await db.inclusionAudit.findMany({
+export async function getInclusionReport(organizationId: string, tenantDb?: PrismaClient) {
+  const client = tenantDb ?? db;
+  const audits = await client.inclusionAudit.findMany({
     where: { organizationId },
     orderBy: { auditedAt: "desc" },
     take: 100,

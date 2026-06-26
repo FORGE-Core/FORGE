@@ -38,7 +38,7 @@ export async function GET(
       return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
     }
 
-    const profile = await getOrCreateAccessibilityProfile(id, organizationId);
+    const profile = await getOrCreateAccessibilityProfile(id, organizationId, tenant.ctx.db);
     return NextResponse.json({
       user: member,
       profile: serializeAccessibilityProfile(profile),
@@ -97,7 +97,7 @@ export async function PATCH(
         typeof body.assistedReadingMode === "boolean"
           ? body.assistedReadingMode
           : undefined,
-    });
+    }, tenant.ctx.db);
 
     return NextResponse.json({
       user: member,

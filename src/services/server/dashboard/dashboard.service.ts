@@ -1,6 +1,5 @@
 import { getAlaeContextForUser } from "@/lib/alae/accessibility-profile";
 import { buildAlaeRecommendations } from "@/lib/alae/recommendations";
-import { db } from "@/lib/db";
 import { formatDuration } from "@/lib/training/format";
 import type { ServiceContext } from "@/services/server/types";
 import { getOrganizationModules } from "@/services/server/training/modules.service";
@@ -24,8 +23,8 @@ export async function getDashboardData(
   const { organizationId, userId } = ctx;
 
   const [modules, alaeContext] = await Promise.all([
-    getOrganizationModules(organizationId, userId),
-    getAlaeContextForUser(userId, organizationId),
+    getOrganizationModules(organizationId, userId, ctx.db),
+    getAlaeContextForUser(userId, organizationId, ctx.db),
   ]);
 
   const completed = modules.filter((m) => m.status === "completed").length;
@@ -38,16 +37,16 @@ export async function getDashboardData(
 
   const [attemptCount, avgScore, timeAgg, recentAttempts, recentMessages, completedModules] =
     await Promise.all([
-      db.activityAttempt.count({ where: { userId } }),
-      db.activityAttempt.aggregate({
+      ctx.db.activityAttempt.count({ where: { userId } }),
+      ctx.db.activityAttempt.aggregate({
         where: { userId, score: { not: null } },
         _avg: { score: true },
       }),
-      db.userProgress.aggregate({
+      ctx.db.userProgress.aggregate({
         where: { userId },
         _sum: { timeSpentSecs: true },
       }),
-      db.activityAttempt.findMany({
+      ctx.db.activityAttempt.findMany({
         where: { userId },
         orderBy: { createdAt: "desc" },
         take: 3,
@@ -57,7 +56,7 @@ export async function getDashboardData(
           },
         },
       }),
-      db.message.findMany({
+      ctx.db.message.findMany({
         where: {
           conversation: { userId, organizationId },
           role: "user",
@@ -66,7 +65,7 @@ export async function getDashboardData(
         take: 2,
         select: { content: true, createdAt: true },
       }),
-      db.userProgress.findMany({
+      ctx.db.userProgress.findMany({
         where: {
           userId,
           percentComplete: { gte: 100 },

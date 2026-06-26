@@ -21,6 +21,7 @@ export async function POST(
       activityId: id,
       answers: body.answers ?? body,
       timeSecs: body.timeSecs,
+      db: tenant.ctx.db,
     });
 
     return NextResponse.json({

@@ -62,7 +62,7 @@ export default function OnboardingPage() {
       const data = await onboardingClient.getStatus();
       setStatus(data);
       if (data.completed) {
-        router.replace("/inicio");
+        router.replace("/home");
         return;
       }
       if (!data.steps.documents) setStep(1);
@@ -89,7 +89,7 @@ export default function OnboardingPage() {
         notifications: { onboardingCompleted: true },
       });
       writeOnboardingCache("complete");
-      router.push("/inicio");
+      router.push("/home");
     } catch (err) {
       setError(
         err instanceof ApiClientError
@@ -117,7 +117,7 @@ export default function OnboardingPage() {
         <p className="text-brand-muted-gray">
           La configuración inicial la realiza el administrador de tu empresa.
         </p>
-        <Button onClick={() => router.push("/inicio")}>Ir al dashboard</Button>
+        <Button onClick={() => router.push("/home")}>Ir al dashboard</Button>
       </div>
     );
   }

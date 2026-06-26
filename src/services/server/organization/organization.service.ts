@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import { isAdmin } from "@/lib/auth/roles";
 import { ServiceError } from "@/services/server/errors";
 import type { AdminContext, OrganizationContext } from "@/services/server/types";
+// Note: db (global) is used for shared-schema tables (organizations, users)
+// ctx.db is used for tenant-schema tables (trainingModule, documents)
 
 export async function getOrganization(ctx: OrganizationContext) {
   const [org, activeUsers, moduleCount, documentCount] = await Promise.all([
@@ -20,10 +22,10 @@ export async function getOrganization(ctx: OrganizationContext) {
     db.user.count({
       where: { organizationId: ctx.organizationId, status: "ACTIVE" },
     }),
-    db.trainingModule.count({
+    ctx.db.trainingModule.count({
       where: { organizationId: ctx.organizationId, status: "PUBLISHED" },
     }),
-    db.document.count({ where: { organizationId: ctx.organizationId } }),
+    ctx.db.document.count({ where: { organizationId: ctx.organizationId } }),
   ]);
 
   if (!org) {

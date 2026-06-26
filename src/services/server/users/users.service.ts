@@ -4,6 +4,8 @@ import { canViewReports } from "@/lib/auth/roles";
 import { getOrganizationModules } from "@/services/server/training/modules.service";
 import { ServiceError } from "@/services/server/errors";
 import type { AdminContext, OrganizationContext } from "@/services/server/types";
+// db (global) is used for shared-schema tables (users)
+// ctx.db is used for tenant-schema tables (activityAttempts, messages)
 
 const BCRYPT_ROUNDS = 12;
 
@@ -101,14 +103,14 @@ export async function getTeamMemberDetail(
   }
 
   const [modules, attempts, messages] = await Promise.all([
-    getOrganizationModules(ctx.organizationId, user.id),
-    db.activityAttempt.findMany({
+    getOrganizationModules(ctx.organizationId, user.id, ctx.db),
+    ctx.db.activityAttempt.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: "desc" },
       take: 10,
       include: { activity: { select: { title: true, type: true } } },
     }),
-    db.message.count({
+    ctx.db.message.count({
       where: {
         role: "user",
         conversation: { userId: user.id, organizationId: ctx.organizationId },

@@ -178,7 +178,7 @@ export async function seedOrganization(
       });
     });
 
-    const { embedded } = await embedDocumentChunks(document!.id, org.id);
+    const { embedded } = await embedDocumentChunks(document!.id, org.id, db);
     console.log(
       `   ✓ ${mod.title} — ${chunks.length} fragmentos${embedded > 0 ? `, ${embedded} embeddings` : ""}`
     );
