@@ -1,26 +1,20 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
+import { getCachedTenant } from "@/lib/auth/cached-session";
+import { cachedReportsData } from "@/lib/cache/page-data";
 import { AccessDenied } from "@/components/shared/access-denied";
-import { getLearningPatternReport } from "@/lib/alae/learning-analytics";
 import { canViewReports } from "@/lib/auth/roles";
-import { getReportsOverview } from "@/services/server/reports";
-import { getEnrichedInclusionReport } from "@/services/server/reports/inclusion-report.service";
 import { ReportsHub } from "@/components/reports";
-import { getTenantDb } from "@/lib/db/tenant-client";
 
 export default async function ReportsPage({
   searchParams,
 }: {
   searchParams: Promise<{ tab?: string }>;
 }) {
-  const session = await auth();
-  const organizationId = session?.user?.organizationId;
-  const role = session?.user?.role;
+  const tenant = await getCachedTenant();
+  if (!tenant) redirect("/login");
 
-  if (!organizationId) redirect("/login");
-
-  if (!canViewReports(role)) {
+  if (!canViewReports(tenant.role)) {
     return (
       <AccessDenied
         title="Reportes"
@@ -34,11 +28,10 @@ export default async function ReportsPage({
     tabParam === "inclusion" || tabParam === "patterns" ? tabParam : "overview";
 
   try {
-    const [overview, inclusion, patterns] = await Promise.all([
-      getReportsOverview({ organizationId, role, db: getTenantDb(organizationId) }),
-      getEnrichedInclusionReport(organizationId),
-      getLearningPatternReport(organizationId),
-    ]);
+    const { overview, inclusion, patterns } = await cachedReportsData(
+      tenant.organizationId,
+      tenant.role
+    );
 
     return (
       <div className="space-y-6 pb-8">

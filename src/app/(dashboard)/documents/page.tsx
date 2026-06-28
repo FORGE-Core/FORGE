@@ -1,21 +1,16 @@
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
-import { listDocuments } from "@/services/server/documents";
+import { getCachedTenant } from "@/lib/auth/cached-session";
+import { cachedDocuments } from "@/lib/cache/page-data";
 import { DocumentsContent } from "@/components/documents";
-import { getTenantDb } from "@/lib/db/tenant-client";
 
 export default async function DocumentsPage() {
-  const session = await auth();
-  const organizationId = session?.user?.organizationId;
-  const role = session?.user?.role;
+  const tenant = await getCachedTenant();
+  if (!tenant) redirect("/login");
 
-  if (!organizationId) redirect("/login");
-
-  const { documents } = await listDocuments({
-    organizationId,
-    role,
-    db: getTenantDb(organizationId),
-  });
+  const { documents } = await cachedDocuments(
+    tenant.organizationId,
+    tenant.role
+  );
 
   return <DocumentsContent initialDocuments={documents} />;
 }

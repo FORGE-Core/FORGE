@@ -101,14 +101,7 @@ export default function OnboardingPage() {
     }
   }
 
-  if (loading) {
-    return (
-      <p className="flex items-center gap-2 text-sm text-brand-muted-gray">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        Preparando configuración…
-      </p>
-    );
-  }
+  if (loading) return null;
 
   if (!status?.isAdmin) {
     return (

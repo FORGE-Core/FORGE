@@ -1,16 +1,9 @@
-"use client";
-
-import { motion } from "framer-motion";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 export function Navbar() {
   return (
-    <motion.header
-      initial={{ y: -20, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      className="fixed top-0 z-50 w-full border-b border-black/5 bg-brand-light-bg/80 backdrop-blur-xl"
-    >
+    <header className="fixed top-0 z-50 w-full border-b border-black/5 bg-brand-light-bg/80 backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-300">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
         <Link href="/" className="font-heading text-xl font-bold">
           <span className="text-gradient">Forge</span>
@@ -29,6 +22,6 @@ export function Navbar() {
           </Button>
         </div>
       </div>
-    </motion.header>
+    </header>
   );
 }

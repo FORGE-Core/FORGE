@@ -1,27 +1,19 @@
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
-import { getProfileData } from "@/services/server/profile";
-import { getOrganizationName } from "@/services/server/organization";
+import { getCachedTenant } from "@/lib/auth/cached-session";
+import { cachedProfileData } from "@/lib/cache/page-data";
 import { ProfileView } from "@/components/profile";
-import { getTenantDb } from "@/lib/db/tenant-client";
 
 export default async function ProfilePage() {
-  const session = await auth();
-  const organizationId = session?.user?.organizationId;
-  const userId = session?.user?.id;
-  const role = session?.user?.role;
+  const tenant = await getCachedTenant();
+  if (!tenant) redirect("/login");
 
-  if (!organizationId || !userId || !role) redirect("/login");
-
-  const orgName = await getOrganizationName(organizationId);
-  const profile = await getProfileData(
-    { organizationId, userId, role, db: getTenantDb(organizationId) },
-    {
-      name: session.user.name ?? null,
-      email: session.user.email ?? "",
-      role: session.user.role ?? "EMPLOYEE",
-    },
-    orgName
+  const profile = await cachedProfileData(
+    tenant.organizationId,
+    tenant.userId,
+    tenant.role,
+    tenant.userName,
+    tenant.userEmail ?? "",
+    tenant.name
   );
 
   return <ProfileView profile={profile} />;

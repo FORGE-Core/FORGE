@@ -1,30 +1,17 @@
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
-import { isAdmin } from "@/lib/auth/roles";
-import { getLatestInclusionScores } from "@/lib/alae/inclusion-scorer";
-import { getOrganizationModules } from "@/lib/training/modules";
+import { getCachedTenant } from "@/lib/auth/cached-session";
+import { cachedOrganizationModules } from "@/lib/cache/page-data";
 import { ModulesContent } from "@/components/modules";
 
 export default async function ModulesPage() {
-  const session = await auth();
-  const organizationId = session?.user?.organizationId;
-  const userId = session?.user?.id;
+  const tenant = await getCachedTenant();
+  if (!tenant) redirect("/login");
 
-  if (!organizationId || !userId) redirect("/login");
-
-  let modules = await getOrganizationModules(organizationId, userId);
-
-  if (isAdmin(session.user.role)) {
-    const scores = await getLatestInclusionScores(
-      organizationId,
-      "MODULE",
-      modules.map((m) => m.id)
-    );
-    modules = modules.map((m) => ({
-      ...m,
-      inclusionScore: scores.get(m.id)?.score ?? null,
-    }));
-  }
+  const modules = await cachedOrganizationModules(
+    tenant.organizationId,
+    tenant.userId,
+    tenant.role
+  );
 
   return <ModulesContent initialModules={modules} />;
 }

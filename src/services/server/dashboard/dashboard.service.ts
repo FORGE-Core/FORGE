@@ -22,9 +22,53 @@ export async function getDashboardData(
 ) {
   const { organizationId, userId } = ctx;
 
-  const [modules, alaeContext] = await Promise.all([
+  const [
+    modules,
+    alaeContext,
+    attemptCount,
+    avgScore,
+    timeAgg,
+    recentAttempts,
+    recentMessages,
+    completedModules,
+  ] = await Promise.all([
     getOrganizationModules(organizationId, userId, ctx.db),
     getAlaeContextForUser(userId, organizationId, ctx.db),
+    ctx.db.activityAttempt.count({ where: { userId } }),
+    ctx.db.activityAttempt.aggregate({
+      where: { userId, score: { not: null } },
+      _avg: { score: true },
+    }),
+    ctx.db.userProgress.aggregate({
+      where: { userId },
+      _sum: { timeSpentSecs: true },
+    }),
+    ctx.db.activityAttempt.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      take: 3,
+      include: {
+        activity: {
+          include: { module: { select: { title: true, slug: true } } },
+        },
+      },
+    }),
+    ctx.db.message.findMany({
+      where: { conversation: { userId, organizationId }, role: "user" },
+      orderBy: { createdAt: "desc" },
+      take: 2,
+      select: { content: true, createdAt: true },
+    }),
+    ctx.db.userProgress.findMany({
+      where: {
+        userId,
+        percentComplete: { gte: 100 },
+        completedAt: { not: null },
+      },
+      orderBy: { completedAt: "desc" },
+      take: 2,
+      include: { module: { select: { title: true } } },
+    }),
   ]);
 
   const completed = modules.filter((m) => m.status === "completed").length;
@@ -34,48 +78,6 @@ export async function getDashboardData(
         modules.reduce((sum, m) => sum + m.progress, 0) / modules.length
       )
     : 0;
-
-  const [attemptCount, avgScore, timeAgg, recentAttempts, recentMessages, completedModules] =
-    await Promise.all([
-      ctx.db.activityAttempt.count({ where: { userId } }),
-      ctx.db.activityAttempt.aggregate({
-        where: { userId, score: { not: null } },
-        _avg: { score: true },
-      }),
-      ctx.db.userProgress.aggregate({
-        where: { userId },
-        _sum: { timeSpentSecs: true },
-      }),
-      ctx.db.activityAttempt.findMany({
-        where: { userId },
-        orderBy: { createdAt: "desc" },
-        take: 3,
-        include: {
-          activity: {
-            include: { module: { select: { title: true, slug: true } } },
-          },
-        },
-      }),
-      ctx.db.message.findMany({
-        where: {
-          conversation: { userId, organizationId },
-          role: "user",
-        },
-        orderBy: { createdAt: "desc" },
-        take: 2,
-        select: { content: true, createdAt: true },
-      }),
-      ctx.db.userProgress.findMany({
-        where: {
-          userId,
-          percentComplete: { gte: 100 },
-          completedAt: { not: null },
-        },
-        orderBy: { completedAt: "desc" },
-        take: 2,
-        include: { module: { select: { title: true } } },
-      }),
-    ]);
 
   const totalSecs = timeAgg._sum.timeSpentSecs ?? 0;
   const trainingHours =

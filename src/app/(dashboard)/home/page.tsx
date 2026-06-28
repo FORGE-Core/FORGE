@@ -1,21 +1,17 @@
 import { redirect } from "next/navigation";
 import { getCachedTenant } from "@/lib/auth/cached-session";
-import { getDashboardData } from "@/services/server/dashboard";
+import { cachedDashboardData } from "@/lib/cache/page-data";
 import { HomeChrome } from "@/components/layout/home-chrome";
 import { DashboardView } from "@/components/dashboard";
-import { getTenantDb } from "@/lib/db/tenant-client";
 
 export default async function DashboardPage() {
   const tenant = await getCachedTenant();
   if (!tenant) redirect("/login");
 
-  const data = await getDashboardData(
-    {
-      organizationId: tenant.organizationId,
-      userId: tenant.userId,
-      role: tenant.role,
-      db: getTenantDb(tenant.organizationId),
-    },
+  const data = await cachedDashboardData(
+    tenant.organizationId,
+    tenant.userId,
+    tenant.role,
     tenant.userName,
     tenant.name
   );

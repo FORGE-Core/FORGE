@@ -1,15 +1,11 @@
 import type { NextConfig } from "next";
-import path from "path";
 
 const nextConfig: NextConfig = {
-  outputFileTracingRoot: path.join(__dirname),
   poweredByHeader: false,
   compress: true,
   productionBrowserSourceMaps: false,
   serverExternalPackages: ["unpdf", "@aws-sdk/client-s3", "cloudinary"],
-  turbopack: {
-    root: path.join(__dirname),
-  },
+  turbopack: {},
   compiler: {
     removeConsole:
       process.env.NODE_ENV === "production"
@@ -28,8 +24,8 @@ const nextConfig: NextConfig = {
       "@radix-ui/react-scroll-area",
     ],
     staleTimes: {
-      dynamic: 30,
-      static: 180,
+      dynamic: 60,
+      static: 300,
     },
     serverActions: {
       bodySizeLimit: "10mb",
@@ -45,8 +41,13 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/dashboard",
-        destination: "/inicio",
+        destination: "/home",
         permanent: false,
+      },
+      {
+        source: "/inicio",
+        destination: "/home",
+        permanent: true,
       },
       {
         source: "/dashboard/:path*",

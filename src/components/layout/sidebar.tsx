@@ -12,43 +12,24 @@ import {
   Users,
   Zap,
 } from "lucide-react";
+import { useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { APP_ROUTES } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import { useTenant } from "@/providers/tenant-provider";
 
 const navItems = [
-  { href: APP_ROUTES.home, label: "Inicio", icon: LayoutDashboard, exact: true },
-  { href: APP_ROUTES.modules, label: "Módulos", icon: BookOpen },
-  {
-    href: APP_ROUTES.activities,
-    label: "Práctica",
-    icon: Zap,
-    roles: ["ADMIN", "SUPERVISOR"] as const,
-  },
-  { href: APP_ROUTES.chat, label: "Mentor IA", icon: Bot },
-  {
-    href: APP_ROUTES.documents,
-    label: "Documentos",
-    icon: FileText,
-    roles: ["ADMIN", "SUPERVISOR"] as const,
-  },
-  {
-    href: APP_ROUTES.reports,
-    label: "Reportes",
-    icon: BarChart3,
-    roles: ["ADMIN", "SUPERVISOR"] as const,
-  },
-  {
-    href: APP_ROUTES.team,
-    label: "Equipo",
-    icon: Users,
-    roles: ["ADMIN", "SUPERVISOR"] as const,
-  },
-  { href: APP_ROUTES.profile, label: "Mi perfil", icon: User },
-  { href: APP_ROUTES.settings, label: "Ajustes", icon: Settings },
+  { href: APP_ROUTES.home,       label: "Inicio",      icon: LayoutDashboard, exact: true },
+  { href: APP_ROUTES.modules,    label: "Módulos",     icon: BookOpen },
+  { href: APP_ROUTES.activities, label: "Práctica",    icon: Zap,      roles: ["ADMIN", "SUPERVISOR"] as const },
+  { href: APP_ROUTES.chat,       label: "Mentor IA",   icon: Bot },
+  { href: APP_ROUTES.documents,  label: "Documentos",  icon: FileText, roles: ["ADMIN", "SUPERVISOR"] as const },
+  { href: APP_ROUTES.reports,    label: "Reportes",    icon: BarChart3,roles: ["ADMIN", "SUPERVISOR"] as const },
+  { href: APP_ROUTES.team,       label: "Equipo",      icon: Users,    roles: ["ADMIN", "SUPERVISOR"] as const },
+  { href: APP_ROUTES.profile,    label: "Mi perfil",   icon: User },
+  { href: APP_ROUTES.settings,   label: "Ajustes",     icon: Settings },
 ];
 
 function userInitials(name?: string | null, email?: string | null) {
@@ -61,6 +42,7 @@ function userInitials(name?: string | null, email?: string | null) {
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const tenant = useTenant();
 
   const visibleItems = navItems.filter((item) => {
@@ -69,6 +51,15 @@ export function Sidebar() {
     }
     return true;
   });
+
+  // Prefetch all visible routes eagerly after mount so every click is instant
+  useEffect(() => {
+    const t = setTimeout(() => {
+      visibleItems.forEach((item) => router.prefetch(item.href));
+    }, 800);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <aside
@@ -83,7 +74,6 @@ export function Sidebar() {
       {/* Logo */}
       <Link
         href={APP_ROUTES.home}
-        prefetch={false}
         aria-label="FORGE, ir al inicio"
         className="mb-5 flex w-full items-center justify-center px-2 group-hover/sidebar:justify-start group-hover/sidebar:gap-3 group-hover/sidebar:px-4"
       >
@@ -114,10 +104,10 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
-              prefetch={false}
               aria-label={item.label}
               aria-current={active ? "page" : undefined}
               className="block"
+              onMouseEnter={() => router.prefetch(item.href)}
             >
               <div
                 className={cn(
@@ -147,28 +137,28 @@ export function Sidebar() {
       {/* Footer */}
       <div className="mt-2 space-y-1 border-t border-white/8 px-2 pt-3">
         <div
-            className={cn(
-              "flex items-center rounded-2xl py-2 transition-all duration-300",
-              "justify-center group-hover/sidebar:justify-start group-hover/sidebar:px-3"
-            )}
-            title={tenant.userEmail ?? undefined}
-          >
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/12 text-xs font-semibold text-white/90">
-              {userInitials(tenant.userName, tenant.userEmail)}
-            </div>
-            <div
-              className={cn(
-                "max-w-0 overflow-hidden opacity-0",
-                "transition-[max-width,opacity,margin] duration-300 ease-out",
-                "group-hover/sidebar:ml-3 group-hover/sidebar:max-w-[160px] group-hover/sidebar:opacity-100"
-              )}
-            >
-              <p className="truncate text-sm font-medium text-white/90">
-                {tenant.userName ?? "Usuario"}
-              </p>
-              <p className="truncate text-xs text-white/45">{tenant.userEmail}</p>
-            </div>
+          className={cn(
+            "flex items-center rounded-2xl py-2 transition-all duration-300",
+            "justify-center group-hover/sidebar:justify-start group-hover/sidebar:px-3"
+          )}
+          title={tenant.userEmail ?? undefined}
+        >
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/12 text-xs font-semibold text-white/90">
+            {userInitials(tenant.userName, tenant.userEmail)}
           </div>
+          <div
+            className={cn(
+              "max-w-0 overflow-hidden opacity-0",
+              "transition-[max-width,opacity,margin] duration-300 ease-out",
+              "group-hover/sidebar:ml-3 group-hover/sidebar:max-w-[160px] group-hover/sidebar:opacity-100"
+            )}
+          >
+            <p className="truncate text-sm font-medium text-white/90">
+              {tenant.userName ?? "Usuario"}
+            </p>
+            <p className="truncate text-xs text-white/45">{tenant.userEmail}</p>
+          </div>
+        </div>
 
         <button
           type="button"

@@ -1,18 +1,15 @@
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
+import { getCachedTenant } from "@/lib/auth/cached-session";
+import { cachedTeamMembers } from "@/lib/cache/page-data";
 import { AccessDenied } from "@/components/shared/access-denied";
 import { isAdmin, isSupervisor } from "@/lib/auth/roles";
-import { getTeamMembers } from "@/lib/team/members";
 import { TeamContent } from "@/components/team";
 
 export default async function TeamPage() {
-  const session = await auth();
-  const organizationId = session?.user?.organizationId;
-  const role = session?.user?.role;
+  const tenant = await getCachedTenant();
+  if (!tenant) redirect("/login");
 
-  if (!organizationId) redirect("/login");
-
-  if (!isAdmin(role) && !isSupervisor(role)) {
+  if (!isAdmin(tenant.role) && !isSupervisor(tenant.role)) {
     return (
       <AccessDenied
         title="Equipo"
@@ -21,7 +18,7 @@ export default async function TeamPage() {
     );
   }
 
-  const users = await getTeamMembers(organizationId);
+  const users = await cachedTeamMembers(tenant.organizationId);
 
   return <TeamContent initialUsers={users} />;
 }
