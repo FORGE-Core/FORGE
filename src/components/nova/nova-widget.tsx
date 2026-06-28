@@ -64,7 +64,7 @@ export function NovaWidget() {
                 </p>
               )}
               <Button className="w-full" asChild>
-                <Link href="/dashboard/chat">
+                <Link href="/chat">
                   <MessageCircle className="h-4 w-4" />
                   Abrir mentor IA
                 </Link>

@@ -1,18 +1,14 @@
-import { auth } from "@/auth";
 import { sendPushToUser } from "@/lib/notifications/push";
+import { requireTenantApi } from "@/lib/api/tenant-route";
 
 export async function POST() {
-  const session = await auth();
-  const userId = session?.user?.id;
+  const tenant = await requireTenantApi();
+  if (!tenant.ok) return tenant.response;
 
-  if (!userId) {
-    return Response.json({ error: "No autorizado" }, { status: 401 });
-  }
-
-  const result = await sendPushToUser(userId, {
+  const result = await sendPushToUser(tenant.ctx.userId, {
     title: "FORGE — Prueba",
     body: "Las notificaciones push funcionan correctamente.",
-    url: "/dashboard",
+    url: "/home",
     tag: "test",
   });
 

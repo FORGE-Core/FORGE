@@ -1,4 +1,4 @@
-const CACHE = "forge-shell-v2";
+const CACHE = "forge-shell-v4";
 const SHELL = ["/icons/icon.svg"];
 
 self.addEventListener("install", (event) => {
@@ -53,7 +53,7 @@ self.addEventListener("fetch", (event) => {
 });
 
 self.addEventListener("push", (event) => {
-  let data = { title: "FORGE", body: "Tienes una actualización", url: "/dashboard" };
+  let data = { title: "FORGE", body: "Tienes una actualización", url: "/inicio" };
   try {
     if (event.data) data = { ...data, ...event.data.json() };
   } catch {
@@ -66,14 +66,14 @@ self.addEventListener("push", (event) => {
       icon: "/icons/icon.svg",
       badge: "/icons/icon.svg",
       tag: data.tag ?? "forge",
-      data: { url: data.url ?? "/dashboard" },
+      data: { url: data.url ?? "/inicio" },
     })
   );
 });
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const url = event.notification.data?.url ?? "/dashboard";
+  const url = event.notification.data?.url ?? "/inicio";
   event.waitUntil(
     clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
       for (const client of list) {

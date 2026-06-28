@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { isAdmin } from "@/lib/auth/roles";
 import { db } from "@/lib/db";
+import { requireTenantApi } from "@/lib/api/tenant-route";
 
 export async function GET() {
   try {
-    const session = await auth();
-    const organizationId = session?.user?.organizationId;
+    const tenant = await requireTenantApi();
+    if (!tenant.ok) return tenant.response;
 
-    if (!organizationId) {
-      return NextResponse.json({ error: "Debes iniciar sesión" }, { status: 401 });
-    }
+    const { organizationId } = tenant.ctx;
+    const admin = isAdmin(tenant.ctx.role);
 
     const org = await db.organization.findUnique({
       where: { id: organizationId },
@@ -22,6 +22,19 @@ export async function GET() {
       unknown
     >;
     const completed = notifications.onboardingCompleted === true;
+
+    if (completed || !admin) {
+      return NextResponse.json({
+        completed,
+        steps: {
+          documents: true,
+          team: true,
+          chat: true,
+        },
+        counts: { documents: 0, users: 0, chatQuestions: 0 },
+        isAdmin: admin,
+      });
+    }
 
     const [documentCount, userCount, chatCount] = await Promise.all([
       db.document.count({
@@ -45,8 +58,12 @@ export async function GET() {
         team: userCount > 1,
         chat: chatCount > 0,
       },
-      counts: { documents: documentCount, users: userCount, chatQuestions: chatCount },
-      isAdmin: session?.user?.role === "ADMIN",
+      counts: {
+        documents: documentCount,
+        users: userCount,
+        chatQuestions: chatCount,
+      },
+      isAdmin: admin,
     });
   } catch (error) {
     console.error("[onboarding/status GET]", error);

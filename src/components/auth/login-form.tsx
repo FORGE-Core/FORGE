@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { signIn, signOut, useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -29,21 +29,40 @@ type LoginFormProps = {
 export function LoginForm({ googleEnabled = false }: LoginFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard";
+  const { data: session, status } = useSession();
+  const callbackUrl = searchParams.get("callbackUrl") ?? "/home";
   const authError = searchParams.get("error");
   const [error, setError] = useState<string | null>(
     authError ? AUTH_ERRORS[authError] ?? "No se pudo iniciar sesión" : null
   );
   const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  useEffect(() => {
+    if (searchParams.get("signedOut") === "1") {
+      setError(null);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (status === "authenticated" && session?.user) {
+      router.replace(callbackUrl);
+    }
+  }, [status, session, callbackUrl, router]);
+
+  async function handleSignOut() {
+    setLoading(true);
+    await signOut({ redirect: false });
+    setLoading(false);
+    router.replace("/login?signedOut=1");
+    router.refresh();
+  }
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     setLoading(true);
-
-    const form = new FormData(e.currentTarget);
-    const email = String(form.get("email"));
-    const password = String(form.get("password"));
 
     const result = await signIn("credentials", {
       email,
@@ -87,13 +106,19 @@ export function LoginForm({ googleEnabled = false }: LoginFormProps) {
               correo.
             </p>
             <div className="relative text-center text-xs text-brand-muted-gray">
-              <span className="relative z-10 bg-white px-2">o con email</span>
+              <span className="relative z-10 bg-white px-2 dark:bg-[#1c1c1f]">
+                o con email
+              </span>
               <div className="absolute inset-x-0 top-1/2 border-t border-black/10" />
             </div>
           </>
         )}
 
-        <form className="space-y-3" onSubmit={onSubmit}>
+        <form className="space-y-3" onSubmit={onSubmit} aria-describedby="login-voice-help">
+          <p id="login-voice-help" className="sr-only">
+            Usa Tab para moverte. Cada opción se lee en voz alta. En correo y
+            contraseña el micrófono se activa solo. Di arroba y punto en el correo.
+          </p>
           {error && (
             <p
               role="alert"
@@ -102,34 +127,34 @@ export function LoginForm({ googleEnabled = false }: LoginFormProps) {
               {error}
             </p>
           )}
-          <div>
-            <label htmlFor="login-email" className="sr-only">
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="login-email" className="text-xs font-semibold text-brand-muted-gray">
               Correo electrónico
             </label>
             <input
               id="login-email"
-              name="email"
               type="email"
-              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               autoComplete="email"
               placeholder="correo@empresa.com"
-              aria-label="Correo electrónico"
-              className="w-full rounded-2xl border border-black/10 bg-brand-light-bg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-cobalt/30"
+              className="rounded-xl border border-black/10 bg-brand-light-bg px-3.5 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-cobalt/30"
+              required
             />
           </div>
-          <div>
-            <label htmlFor="login-password" className="sr-only">
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="login-password" className="text-xs font-semibold text-brand-muted-gray">
               Contraseña
             </label>
             <input
               id="login-password"
-              name="password"
               type="password"
-              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
               placeholder="Contraseña"
-              aria-label="Contraseña"
-              className="w-full rounded-2xl border border-black/10 bg-brand-light-bg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-cobalt/30"
+              className="rounded-xl border border-black/10 bg-brand-light-bg px-3.5 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-cobalt/30"
+              required
             />
           </div>
           <Button type="submit" className="w-full" disabled={loading}>

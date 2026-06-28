@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { Bell, BellOff, Loader2 } from "lucide-react";
 import { FeedbackBanner } from "@/components/shared/feedback-banner";
 import { Button } from "@/components/ui/button";
+import { notificationsClient } from "@/services/client";
+import { ApiClientError } from "@/services/client/http";
 
 function urlBase64ToUint8Array(base64: string) {
   const padding = "=".repeat((4 - (base64.length % 4)) % 4);
@@ -64,15 +66,7 @@ export function PushToggle() {
         applicationServerKey: urlBase64ToUint8Array(vapid),
       });
 
-      const res = await fetch("/api/notifications/subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subscription: sub.toJSON() }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error ?? "No se pudo activar");
-      }
+      await notificationsClient.subscribe({ subscription: sub.toJSON() });
       setEnabled(true);
       setMessage({ type: "success", text: "Notificaciones activadas." });
     } catch (err) {
@@ -92,13 +86,9 @@ export function PushToggle() {
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.getSubscription();
       if (sub) {
-        await fetch("/api/notifications/subscribe", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "unsubscribe",
-            subscription: sub.toJSON(),
-          }),
+        await notificationsClient.subscribe({
+          action: "unsubscribe",
+          subscription: sub.toJSON(),
         });
         await sub.unsubscribe();
       }
@@ -123,11 +113,8 @@ export function PushToggle() {
     setLoading(true);
     setMessage(null);
     try {
-      const res = await fetch("/api/notifications/test", { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) {
-        setMessage({ type: "error", text: data.error ?? "Error al enviar prueba" });
-      } else if (data.skipped) {
+      const data = await notificationsClient.test();
+      if (data.skipped) {
         setMessage({
           type: "info",
           text: "Configura VAPID en .env para enviar push.",
@@ -140,6 +127,14 @@ export function PushToggle() {
       } else {
         setMessage({ type: "success", text: "Notificación de prueba enviada." });
       }
+    } catch (err) {
+      setMessage({
+        type: "error",
+        text:
+          err instanceof ApiClientError
+            ? err.message
+            : "Error al enviar prueba",
+      });
     } finally {
       setLoading(false);
     }

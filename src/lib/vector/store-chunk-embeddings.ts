@@ -1,10 +1,13 @@
-import { getAIProvider } from "@/ai/providers";
-import { db } from "@/lib/db";
+import { getEmbeddingProvider } from "@/ai/providers";
+import type { PrismaClient } from "@prisma/client";
 import { getEnv } from "@/lib/env";
 import { getEmbeddingDimensions } from "./dimensions";
 
 function hasEmbeddingProvider(): boolean {
-  const provider = getEnv("AI_DEFAULT_PROVIDER") ?? "gemini";
+  // Anthropic no genera embeddings; el proveedor de embeddings se resuelve por
+  // EMBEDDING_PROVIDER, o por AI_DEFAULT_PROVIDER cayendo en gemini si es claude.
+  const configured = getEnv("EMBEDDING_PROVIDER") ?? getEnv("AI_DEFAULT_PROVIDER") ?? "gemini";
+  const provider = configured === "anthropic" ? "gemini" : configured;
   if (provider === "gemini") return !!getEnv("GEMINI_API_KEY");
   if (provider === "openai") return !!getEnv("OPENAI_API_KEY");
   return provider === "ollama";
@@ -16,7 +19,8 @@ function hasEmbeddingProvider(): boolean {
  */
 export async function embedDocumentChunks(
   documentId: string,
-  organizationId: string
+  organizationId: string,
+  db: PrismaClient
 ): Promise<{ embedded: number; skipped: boolean }> {
   if (!hasEmbeddingProvider()) {
     return { embedded: 0, skipped: true };
@@ -31,8 +35,7 @@ export async function embedDocumentChunks(
   if (chunks.length === 0) return { embedded: 0, skipped: false };
 
   try {
-    const provider = getAIProvider();
-    const vectors = await provider.embed({
+    const vectors = await getEmbeddingProvider().embed({
       input: chunks.map((c) => c.content),
     });
 

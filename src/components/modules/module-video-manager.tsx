@@ -5,6 +5,7 @@ import { Loader2, Trash2, Upload, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { trainingClient } from "@/services/client";
 
 type ModuleVideoManagerProps = {
   slug: string;
@@ -33,16 +34,7 @@ export function ModuleVideoManager({
       try {
         const formData = new FormData();
         formData.append("file", file);
-
-        const res = await fetch(`/api/training-modules/${slug}/video`, {
-          method: "POST",
-          body: formData,
-        });
-
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          throw new Error(data.error ?? "No se pudo subir el video");
-        }
+        await trainingClient.uploadModuleVideo(slug, formData);
         onUpdated();
       } catch (err) {
         setError(err instanceof Error ? err.message : "Error al subir");
@@ -67,13 +59,7 @@ export function ModuleVideoManager({
     setDeleting(true);
     setError(null);
     try {
-      const res = await fetch(`/api/training-modules/${slug}/video`, {
-        method: "DELETE",
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(data.error ?? "No se pudo eliminar");
-      }
+      await trainingClient.deleteModuleVideo(slug);
       onUpdated();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al eliminar");

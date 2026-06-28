@@ -1,4 +1,4 @@
-export type AIProviderId = "gemini" | "openai" | "ollama";
+export type AIProviderId = "gemini" | "openai" | "anthropic" | "ollama";
 
 export interface ChatMessage {
   role: "system" | "user" | "assistant";

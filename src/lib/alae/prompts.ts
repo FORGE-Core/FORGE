@@ -38,7 +38,7 @@ export function buildNovaSystemAugmentation(ctx: AlaeContext | null): string {
 
   if (ctx.declaredNeeds.simulations) {
     parts.push(
-      "- Cuando el tema lo permita, sugiere practicar en Simulaciones (/dashboard/simulations).",
+      "- Cuando el tema lo permita, sugiere practicar en Práctica (/activities).",
       "- Propón un mini-escenario de decisión al cerrar la respuesta."
     );
   }

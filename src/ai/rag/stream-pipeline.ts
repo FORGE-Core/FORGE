@@ -1,8 +1,9 @@
-import { getAIProvider } from "@/ai/providers";
+import { getAIProvider, getEmbeddingProvider } from "@/ai/providers";
 import { buildNovaSystemAugmentation } from "@/lib/alae/prompts";
 import type { AlaeContext } from "@/lib/alae/types";
 import { getEnv } from "@/lib/env";
 import { db } from "@/lib/db";
+import type { PrismaClient } from "@prisma/client";
 import { searchSimilarChunks } from "./retriever";
 
 const RAG_SYSTEM_PROMPT = `Eres NOVA, mentor de capacitación empresarial de FORGE.
@@ -15,8 +16,10 @@ REGLAS ESTRICTAS:
 export async function prepareRAGContext(
   organizationId: string,
   question: string,
+  tenantDb?: PrismaClient,
   topK = 5
 ) {
+  const client = tenantDb ?? db;
   let sources: { chunkId: string; content: string; score: number }[] = [];
   let context =
     "Aún no hay documentos indexados para esta organización.";
@@ -25,12 +28,14 @@ export async function prepareRAGContext(
 
   if (ragEnabled) {
     try {
-      const provider = getAIProvider();
-      const [queryEmbedding] = await provider.embed({ input: question });
+      const [queryEmbedding] = await getEmbeddingProvider().embed({
+        input: question,
+      });
       sources = await searchSimilarChunks({
         organizationId,
         embedding: queryEmbedding,
         topK,
+        db: client,
       });
       if (sources.length > 0) {
         context = sources
@@ -41,7 +46,7 @@ export async function prepareRAGContext(
       console.warn("[RAG stream] búsqueda omitida:", err);
     }
   } else {
-    const chunks = await db.documentChunk.findMany({
+    const chunks = await client.documentChunk.findMany({
       where: { organizationId },
       take: topK,
       orderBy: { createdAt: "desc" },
@@ -65,12 +70,14 @@ export async function* streamRAGAnswer({
   organizationId,
   question,
   alaeContext,
+  db: tenantDb,
 }: {
   organizationId: string;
   question: string;
   alaeContext?: AlaeContext | null;
+  db?: PrismaClient;
 }) {
-  const { context } = await prepareRAGContext(organizationId, question);
+  const { context } = await prepareRAGContext(organizationId, question, tenantDb);
   const provider = getAIProvider();
   const systemPrompt =
     RAG_SYSTEM_PROMPT + buildNovaSystemAugmentation(alaeContext ?? null);

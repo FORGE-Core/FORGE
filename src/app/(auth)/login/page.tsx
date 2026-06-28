@@ -1,5 +1,7 @@
 import { Suspense } from "react";
 import { LoginForm } from "@/components/auth/login-form";
+import { AssistedReadingAutoEnable } from "@/components/alae/assisted-reading-auto-enable";
+import { ResetVoiceOnNormalLogin } from "@/components/alae/reset-voice-on-normal-login";
 
 export default function LoginPage() {
   const googleEnabled = !!(
@@ -7,7 +9,16 @@ export default function LoginPage() {
   );
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-4">
+    <main
+      id="main-content"
+      className="main-content-area flex min-h-screen flex-col items-center justify-center px-4 py-8"
+      tabIndex={-1}
+    >
+      <Suspense fallback={null}>
+        <AssistedReadingAutoEnable />
+        <ResetVoiceOnNormalLogin />
+      </Suspense>
+
       <div className="w-full max-w-md space-y-6">
         <h1 className="sr-only">Iniciar sesión en FORGE</h1>
         <Suspense

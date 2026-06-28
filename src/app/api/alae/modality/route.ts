@@ -1,6 +1,6 @@
-import { auth } from "@/auth";
 import { logAccessibilityEvent } from "@/lib/alae/events";
 import { recordModalityUse } from "@/lib/alae/learning-profile";
+import { requireTenantApi } from "@/lib/api/tenant-route";
 import type { LearningModality } from "@prisma/client";
 
 const VALID: LearningModality[] = [
@@ -12,13 +12,10 @@ const VALID: LearningModality[] = [
 ];
 
 export async function POST(req: Request) {
-  const session = await auth();
-  const userId = session?.user?.id;
-  const organizationId = session?.user?.organizationId;
+  const tenant = await requireTenantApi();
+  if (!tenant.ok) return tenant.response;
 
-  if (!userId || !organizationId) {
-    return Response.json({ error: "No autorizado" }, { status: 401 });
-  }
+  const { userId, organizationId, db: tenantDb } = tenant.ctx;
 
   let body: { modality?: string; source?: string };
   try {
@@ -32,7 +29,7 @@ export async function POST(req: Request) {
     return Response.json({ error: "modality inválida" }, { status: 400 });
   }
 
-  await recordModalityUse(userId, organizationId, modality);
+  await recordModalityUse(userId, organizationId, tenantDb, modality);
   await logAccessibilityEvent({
     organizationId,
     userId,

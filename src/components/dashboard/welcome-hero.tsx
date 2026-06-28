@@ -20,7 +20,7 @@ export function WelcomeHero({
           Centro de aprendizaje
         </div>
         <h1 className="font-heading text-3xl font-bold md:text-4xl">
-          Hola, {name} 👋
+          Hola, {name}
         </h1>
         <p className="mt-2 max-w-xl text-white/85">
           {pendingCount > 0

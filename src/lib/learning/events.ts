@@ -1,8 +1,7 @@
 import { db } from "@/lib/db";
+import type { PrismaClient } from "@prisma/client";
 import { logAccessibilityEvent } from "@/lib/alae/events";
-import { runAutomationsForEvent } from "@/lib/automations/run";
 import { notifyLearningEvent } from "@/lib/notifications/push";
-import { dispatchN8nWebhook } from "@/lib/workflows/n8n";
 
 async function shouldNotify(
   organizationId: string,
@@ -32,12 +31,12 @@ const PUSH_NOTIFY_EVENTS: Record<
   ACTIVITY_FAILED: {
     title: "Actividad no aprobada",
     body: () => "Revisa el módulo y pide ayuda a NOVA con lenguaje fácil.",
-    url: "/dashboard/activities",
+    url: "/activities",
   },
   USER_COMPLETED_MODULE: {
     title: "¡Módulo completado!",
     body: () => "Excelente progreso en tu capacitación.",
-    url: "/dashboard/modules",
+    url: "/modules",
   },
 };
 
@@ -53,14 +52,17 @@ export async function logLearningEvent({
   userId,
   eventType,
   payload,
+  db: tenantDb,
 }: {
   organizationId: string;
   userId: string;
   eventType: string;
   payload: Record<string, unknown>;
+  db?: PrismaClient;
 }) {
+  const client = tenantDb ?? db;
   try {
-    await db.learningEvent.create({
+    await client.learningEvent.create({
       data: {
         organizationId,
         userId,
@@ -68,14 +70,6 @@ export async function logLearningEvent({
         payload: payload as object,
       },
     });
-
-    void dispatchN8nWebhook(eventType, {
-      organizationId,
-      userId,
-      ...payload,
-    });
-
-    void runAutomationsForEvent({ organizationId, eventType, payload });
 
     if (ALAE_LINKED_EVENTS.has(eventType)) {
       void logAccessibilityEvent({

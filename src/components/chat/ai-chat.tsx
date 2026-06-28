@@ -1,7 +1,7 @@
 "use client";
 
-import { motion } from "framer-motion";
 import {
+  Bot,
   FileText,
   History,
   Link2,
@@ -12,15 +12,35 @@ import {
   ShieldCheck,
   User,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { AlaeAdaptButtons } from "@/components/alae/alae-adapt-buttons";
-import { NovaAvatar2D } from "@/components/alae/nova-avatar-2d";
-import { useAccessibility } from "@/components/alae/accessibility-provider";
+import dynamic from "next/dynamic";
+import {
+  useAccessibilityActions,
+  useAccessibilityPrefs,
+  useAccessibilityTransient,
+} from "@/components/alae/accessibility-provider";
 import { useVoiceInput } from "@/hooks/use-voice-input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { chatClient } from "@/services/client";
+
+const NovaAvatar2D = dynamic(
+  () =>
+    import("@/components/alae/nova-avatar-2d").then((mod) => ({
+      default: mod.NovaAvatar2D,
+    })),
+  { ssr: false }
+);
+
+const AlaeAdaptButtons = dynamic(
+  () =>
+    import("@/components/alae/alae-adapt-buttons").then((mod) => ({
+      default: mod.AlaeAdaptButtons,
+    })),
+  { ssr: false }
+);
 
 interface Message {
   id: string;
@@ -40,8 +60,68 @@ type ConversationPreview = {
   updatedAt: string;
 };
 
+const MessageRow = memo(function MessageRow({
+  msg,
+}: {
+  msg: Message;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex gap-3 animate-in fade-in duration-200",
+        msg.role === "user" && "flex-row-reverse"
+      )}
+    >
+      <div
+        className={cn(
+          "flex h-8 w-8 shrink-0 items-center justify-center rounded-xl",
+          msg.role === "assistant"
+            ? "gradient-brand text-white"
+            : "bg-brand-champagne text-brand-cobalt"
+        )}
+      >
+        {msg.role === "assistant" ? (
+          <Bot className="h-4 w-4" />
+        ) : (
+          <User className="h-4 w-4" />
+        )}
+      </div>
+      <div
+        className={cn(
+          "max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed",
+          msg.role === "assistant"
+            ? "bg-brand-light-bg"
+            : "gradient-brand text-white"
+        )}
+      >
+        {msg.content}
+      </div>
+    </div>
+  );
+});
+
+function ChatHeaderAvatar({
+  loading,
+  listening,
+}: {
+  loading: boolean;
+  listening: boolean;
+}) {
+  const { isSpeaking } = useAccessibilityTransient();
+  const state = loading
+    ? "thinking"
+    : listening
+      ? "listening"
+      : isSpeaking
+        ? "speaking"
+        : "idle";
+
+  return <NovaAvatar2D size={40} state={state} />;
+}
+
 export function AIChat() {
-  const { speakAloud, voiceInputEnabled, isSpeaking } = useAccessibility();
+  const { voiceInputEnabled } = useAccessibilityPrefs();
+  const { speakAloud } = useAccessibilityActions();
   const searchParams = useSearchParams();
   const initialPrompt = searchParams.get("prompt");
   const promptedRef = useRef(false);
@@ -67,12 +147,13 @@ export function AIChat() {
   const [history, setHistory] = useState<ConversationPreview[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const sendMessageRef = useRef<(text: string) => void>(() => {});
+  const streamFlushRef = useRef<number | null>(null);
+  const streamBufferRef = useRef({ id: "", text: "" });
 
   const loadHistory = useCallback(async () => {
     try {
-      const res = await fetch("/api/conversations");
-      const data = await res.json();
-      if (res.ok) setHistory(data.conversations ?? []);
+      const data = await chatClient.listConversations();
+      setHistory((data.conversations ?? []) as ConversationPreview[]);
     } catch {
       /* historial opcional */
     }
@@ -80,12 +161,9 @@ export function AIChat() {
 
   const loadSuggestions = useCallback(async () => {
     try {
-      const res = await fetch("/api/chat/suggestions");
-      const data = await res.json();
-      if (res.ok) {
-        setSuggestions(data.suggestions ?? []);
-        setProcesses(data.processes ?? []);
-      }
+      const data = await chatClient.getSuggestions();
+      setSuggestions(data.suggestions ?? []);
+      setProcesses(data.processes ?? []);
     } catch {
       /* sugerencias por defecto en UI */
     }
@@ -110,13 +188,9 @@ export function AIChat() {
     ]);
 
     try {
-      const res = await fetch("/api/chat/stream", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: userMsg.content,
-          conversationId,
-        }),
+      const res = await chatClient.streamMessage({
+        message: userMsg.content,
+        conversationId,
       });
 
       if (!res.ok || !res.body) {
@@ -128,6 +202,22 @@ export function AIChat() {
       const decoder = new TextDecoder();
       let buffer = "";
       let fullAnswer = "";
+
+      const flushStreaming = () => {
+        streamFlushRef.current = null;
+        const { id, text } = streamBufferRef.current;
+        if (!id) return;
+        setMessages((m) =>
+          m.map((msg) => (msg.id === id ? { ...msg, content: text } : msg))
+        );
+      };
+
+      const scheduleStreamingFlush = (assistantId: string, text: string) => {
+        streamBufferRef.current = { id: assistantId, text };
+        if (streamFlushRef.current === null) {
+          streamFlushRef.current = requestAnimationFrame(flushStreaming);
+        }
+      };
 
       while (true) {
         const { done, value } = await reader.read();
@@ -159,18 +249,22 @@ export function AIChat() {
             );
           } else if (event === "token" && payload.text) {
             fullAnswer += payload.text as string;
-            setMessages((m) =>
-              m.map((msg) =>
-                msg.id === assistantId
-                  ? { ...msg, content: fullAnswer }
-                  : msg
-              )
-            );
+            scheduleStreamingFlush(assistantId, fullAnswer);
           } else if (event === "error") {
             throw new Error((payload.error as string) ?? "Error de streaming");
           }
         }
       }
+
+      if (streamFlushRef.current !== null) {
+        cancelAnimationFrame(streamFlushRef.current);
+        streamFlushRef.current = null;
+      }
+      setMessages((m) =>
+        m.map((msg) =>
+          msg.id === assistantId ? { ...msg, content: fullAnswer } : msg
+        )
+      );
 
       if (!fullAnswer) {
         setMessages((m) =>
@@ -206,19 +300,10 @@ export function AIChat() {
     sendMessageRef.current(text);
   });
 
-  const avatarState = loading
-    ? "thinking"
-    : listening
-      ? "listening"
-      : isSpeaking
-        ? "speaking"
-        : "idle";
-
   const loadConversation = useCallback(async (id: string) => {
     try {
-      const res = await fetch(`/api/conversations/${id}`);
-      const data = await res.json();
-      if (!res.ok || !data.conversation) return;
+      const data = await chatClient.getConversation(id);
+      if (!data.conversation) return;
       setConversationId(id);
       setMessages(
         data.conversation.messages.map(
@@ -281,7 +366,7 @@ export function AIChat() {
       <div className="flex h-[calc(100vh-8rem)] flex-col rounded-[24px] border border-black/5 bg-white shadow-sm">
         <div className="flex items-center justify-between gap-3 border-b border-black/5 px-6 py-4">
           <div className="flex items-center gap-3">
-            <NovaAvatar2D size={40} state={avatarState} />
+            <ChatHeaderAvatar loading={loading} listening={listening} />
             <div>
               <h2 className="font-heading font-semibold">NOVA · Mentor IA</h2>
               <p className="text-xs text-brand-muted-gray">
@@ -360,49 +445,15 @@ export function AIChat() {
           aria-live="polite"
         >
           {messages.map((msg) => (
-            <motion.div
-              key={msg.id}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={cn(
-                "flex gap-3",
-                msg.role === "user" && "flex-row-reverse"
-              )}
-            >
-              <div
-                className={cn(
-                  "flex h-8 w-8 shrink-0 items-center justify-center rounded-xl",
-                  msg.role === "assistant"
-                    ? "gradient-brand text-white"
-                    : "bg-brand-champagne text-brand-cobalt"
-                )}
-              >
-                {msg.role === "assistant" ? (
-                  <NovaAvatar2D size={32} state={loading && msg.content === "" ? "thinking" : "idle"} />
-                ) : (
-                  <User className="h-4 w-4" />
-                )}
-              </div>
-              <div
-                className={cn(
-                  "max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed",
-                  msg.role === "assistant"
-                    ? "bg-brand-light-bg"
-                    : "gradient-brand text-white"
-                )}
-              >
-                {msg.content}
-              </div>
-            </motion.div>
+            <MessageRow key={msg.id} msg={msg} />
           ))}
           {loading && (
-            <div className="flex gap-1 px-12">
+            <div className="flex gap-1 px-12" aria-hidden>
               {[0, 1, 2].map((i) => (
-                <motion.span
+                <span
                   key={i}
-                  animate={{ opacity: [0.3, 1, 0.3] }}
-                  transition={{ repeat: Infinity, duration: 1, delay: i * 0.2 }}
-                  className="h-2 w-2 rounded-full bg-brand-lavender"
+                  className="h-2 w-2 animate-pulse rounded-full bg-brand-lavender"
+                  style={{ animationDelay: `${i * 200}ms` }}
                 />
               ))}
             </div>

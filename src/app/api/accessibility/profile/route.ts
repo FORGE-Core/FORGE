@@ -1,22 +1,19 @@
-import { auth } from "@/auth";
 import {
   getOrCreateAccessibilityProfile,
   serializeAccessibilityProfile,
   updateAccessibilityProfile,
 } from "@/lib/alae/accessibility-profile";
 import { logAccessibilityEvent } from "@/lib/alae/events";
+import { requireTenantApi } from "@/lib/api/tenant-route";
 import type { LearningModality, LearningPace } from "@prisma/client";
 
 export async function GET() {
   try {
-    const session = await auth();
-    const userId = session?.user?.id;
-    const organizationId = session?.user?.organizationId;
-    if (!userId || !organizationId) {
-      return Response.json({ error: "No autorizado" }, { status: 401 });
-    }
+    const tenant = await requireTenantApi();
+    if (!tenant.ok) return tenant.response;
 
-    const profile = await getOrCreateAccessibilityProfile(userId, organizationId);
+    const { userId, organizationId, db: tenantDb } = tenant.ctx;
+    const profile = await getOrCreateAccessibilityProfile(userId, organizationId, tenantDb);
     return Response.json({ profile: serializeAccessibilityProfile(profile) });
   } catch (error) {
     console.error("[accessibility/profile GET]", error);
@@ -29,12 +26,10 @@ export async function GET() {
 
 export async function PATCH(req: Request) {
   try {
-    const session = await auth();
-    const userId = session?.user?.id;
-    const organizationId = session?.user?.organizationId;
-    if (!userId || !organizationId) {
-      return Response.json({ error: "No autorizado" }, { status: 401 });
-    }
+    const tenant = await requireTenantApi();
+    if (!tenant.ok) return tenant.response;
+
+    const { userId, organizationId, db: tenantDb } = tenant.ctx;
 
     let body: Record<string, unknown>;
     try {
@@ -74,11 +69,15 @@ export async function PATCH(req: Request) {
         typeof body.voiceInputEnabled === "boolean"
           ? body.voiceInputEnabled
           : undefined,
+      assistedReadingMode:
+        typeof body.assistedReadingMode === "boolean"
+          ? body.assistedReadingMode
+          : undefined,
       declaredNeeds:
         typeof body.declaredNeeds === "object" && body.declaredNeeds
           ? (body.declaredNeeds as object)
           : undefined,
-    });
+    }, tenantDb);
 
     await logAccessibilityEvent({
       organizationId,

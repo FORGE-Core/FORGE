@@ -27,7 +27,7 @@ export function canManageDocuments(role: UserRole | undefined): boolean {
 }
 
 /** Tipos visibles para empleados y supervisores (solo biblioteca publicada). */
-export const EMPLOYEE_VISIBLE_DOCUMENT_TYPES = ["PDF", "VIDEO"] as const;
+export const EMPLOYEE_VISIBLE_DOCUMENT_TYPES = ["PDF", "VIDEO", "IMAGE"] as const;
 
 export function getAdminRequiredError() {
   return "Solo los administradores pueden realizar esta acción";

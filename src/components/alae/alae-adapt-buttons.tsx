@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useAccessibility } from "./accessibility-provider";
 import { SimplifiedContent } from "./simplified-content";
 import { StepByStepView } from "./step-by-step-view";
+import { alaeClient } from "@/services/client";
 
 export function AlaeAdaptButtons({
   content,
@@ -30,25 +31,19 @@ export function AlaeAdaptButtons({
     setLoading(type === "SIMPLIFY" ? "simplify" : "steps");
     setError(null);
     try {
-      const res = await fetch("/api/alae/adapt", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type,
-          content,
-          title,
-          sourceId,
-          sourceType,
-        }),
+      const data = await alaeClient.adapt({
+        type,
+        content,
+        title,
+        sourceId,
+        sourceType,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Error");
       if (type === "SIMPLIFY") {
-        setSimplified(data.content);
-        speakAloud(data.content);
+        setSimplified(data.content as string);
+        speakAloud(data.content as string);
       } else {
-        setSteps(data.steps ?? []);
-        speakAloud(data.content);
+        setSteps((data.steps ?? []) as { order: number; title: string; body: string }[]);
+        speakAloud(data.content as string);
       }
     } catch (err) {
       setError(

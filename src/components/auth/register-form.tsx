@@ -18,14 +18,20 @@ export function RegisterForm() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [companyName, setCompanyName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
-    const formData = new FormData(e.currentTarget);
-    const password = String(formData.get("password"));
+    const formData = new FormData();
+    formData.set("companyName", companyName);
+    formData.set("email", email);
+    formData.set("password", password);
+
     const result = await registerAction(formData);
 
     if (!result.ok) {
@@ -47,7 +53,7 @@ export function RegisterForm() {
       return;
     }
 
-    router.push("/dashboard/onboarding");
+    router.push("/onboarding");
     router.refresh();
   }
 
@@ -71,48 +77,49 @@ export function RegisterForm() {
               {error}
             </p>
           )}
-          <div>
-            <label htmlFor="companyName" className="sr-only">
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="companyName" className="text-xs font-semibold text-brand-muted-gray">
               Nombre de la empresa
             </label>
             <input
               id="companyName"
-              name="companyName"
-              required
+              type="text"
+              value={companyName}
+              onChange={(e) => setCompanyName(e.target.value)}
               placeholder="Nombre de la empresa"
-              aria-label="Nombre de la empresa"
-              className="w-full rounded-2xl border border-black/10 bg-brand-light-bg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-cobalt/30"
+              className="rounded-xl border border-black/10 bg-brand-light-bg px-3.5 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-cobalt/30"
+              required
             />
           </div>
-          <div>
-            <label htmlFor="register-email" className="sr-only">
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="register-email" className="text-xs font-semibold text-brand-muted-gray">
               Correo electrónico
             </label>
             <input
               id="register-email"
-              name="email"
               type="email"
-              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               autoComplete="email"
               placeholder="Tu correo corporativo"
-              aria-label="Correo electrónico"
-              className="w-full rounded-2xl border border-black/10 bg-brand-light-bg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-cobalt/30"
+              className="rounded-xl border border-black/10 bg-brand-light-bg px-3.5 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-cobalt/30"
+              required
             />
           </div>
-          <div>
-            <label htmlFor="register-password" className="sr-only">
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="register-password" className="text-xs font-semibold text-brand-muted-gray">
               Contraseña
             </label>
             <input
               id="register-password"
-              name="password"
               type="password"
-              required
-              minLength={6}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               autoComplete="new-password"
               placeholder="Contraseña (mín. 6 caracteres)"
-              aria-label="Contraseña"
-              className="w-full rounded-2xl border border-black/10 bg-brand-light-bg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-cobalt/30"
+              className="rounded-xl border border-black/10 bg-brand-light-bg px-3.5 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-cobalt/30"
+              required
+              minLength={6}
             />
           </div>
           <Button type="submit" className="w-full" disabled={loading}>

@@ -1,4 +1,4 @@
-import type { LearningModality, Prisma, SupportLevel } from "@prisma/client";
+import type { LearningModality, Prisma, PrismaClient, SupportLevel } from "@prisma/client";
 import { db } from "@/lib/db";
 import type { LearningProfileData } from "./types";
 
@@ -51,11 +51,12 @@ export function serializeLearningProfile(
 
 export async function getOrCreateLearningProfile(
   userId: string,
-  organizationId: string
+  organizationId: string,
+  tenantDb: PrismaClient
 ) {
-  let profile = await db.learningProfile.findUnique({ where: { userId } });
+  let profile = await tenantDb.learningProfile.findUnique({ where: { userId } });
   if (!profile) {
-    profile = await db.learningProfile.create({
+    profile = await tenantDb.learningProfile.create({
       data: { userId, organizationId },
     });
   }
@@ -65,6 +66,7 @@ export async function getOrCreateLearningProfile(
 export async function applyWizardToProfiles(
   userId: string,
   organizationId: string,
+  tenantDb: PrismaClient,
   wizard: {
     preferredModality: LearningModality;
     stepByStep: boolean;
@@ -74,7 +76,7 @@ export async function applyWizardToProfiles(
     simulations: boolean;
   }
 ) {
-  await getOrCreateLearningProfile(userId, organizationId);
+  await getOrCreateLearningProfile(userId, organizationId, tenantDb);
 
   const modalityField = {
     READING: "readingCount",
@@ -92,7 +94,7 @@ export async function applyWizardToProfiles(
     learningUpdate[field] = { increment: 3 };
   }
 
-  await db.learningProfile.update({
+  await tenantDb.learningProfile.update({
     where: { userId },
     data: learningUpdate,
   });
@@ -102,7 +104,7 @@ export async function applyWizardToProfiles(
       ? "PRACTICE"
       : wizard.preferredModality;
 
-  await db.accessibilityProfile.upsert({
+  await tenantDb.accessibilityProfile.upsert({
     where: { userId },
     create: {
       userId,
@@ -134,9 +136,10 @@ export async function applyWizardToProfiles(
 export async function recordModalityUse(
   userId: string,
   organizationId: string,
+  tenantDb: PrismaClient,
   modality: LearningModality
 ) {
-  await getOrCreateLearningProfile(userId, organizationId);
+  await getOrCreateLearningProfile(userId, organizationId, tenantDb);
   const fieldMap: Record<LearningModality, string | null> = {
     READING: "readingCount",
     LISTENING: "listeningCount",
@@ -147,7 +150,7 @@ export async function recordModalityUse(
   const field = fieldMap[modality];
   if (!field) return;
 
-  await db.learningProfile.update({
+  await tenantDb.learningProfile.update({
     where: { userId },
     data: { [field]: { increment: 1 }, lastAdaptedAt: new Date() },
   });
@@ -156,9 +159,10 @@ export async function recordModalityUse(
 export async function updateSupportFromSignals(
   userId: string,
   organizationId: string,
+  tenantDb: PrismaClient,
   signals: { failedAttempts?: number; chatQuestions?: number }
 ) {
-  const profile = await getOrCreateLearningProfile(userId, organizationId);
+  const profile = await getOrCreateLearningProfile(userId, organizationId, tenantDb);
   let supportLevel: SupportLevel = profile.supportLevel;
 
   if ((signals.failedAttempts ?? 0) >= 3) {
@@ -175,7 +179,7 @@ export async function updateSupportFromSignals(
   }
 
   if (supportLevel !== profile.supportLevel) {
-    await db.learningProfile.update({
+    await tenantDb.learningProfile.update({
       where: { userId },
       data: { supportLevel, lastAdaptedAt: new Date() },
     });
@@ -184,16 +188,17 @@ export async function updateSupportFromSignals(
 
 export async function syncSupportLevelFromActivity(
   userId: string,
-  organizationId: string
+  organizationId: string,
+  tenantDb: PrismaClient
 ) {
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
   const [failedAttempts, chatQuestions] = await Promise.all([
-    db.activityAttempt.count({
+    tenantDb.activityAttempt.count({
       where: { userId, passed: false, createdAt: { gte: thirtyDaysAgo } },
     }),
-    db.learningEvent.count({
+    tenantDb.learningEvent.count({
       where: {
         userId,
         organizationId,
@@ -203,7 +208,7 @@ export async function syncSupportLevelFromActivity(
     }),
   ]);
 
-  await updateSupportFromSignals(userId, organizationId, {
+  await updateSupportFromSignals(userId, organizationId, tenantDb, {
     failedAttempts,
     chatQuestions,
   });

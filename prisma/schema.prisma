@@ -434,6 +434,7 @@ model AccessibilityProfile {
   wizardCompleted       Boolean          @default(false)
   voiceCommandsEnabled  Boolean          @default(false)
   voiceInputEnabled     Boolean          @default(false)
+  assistedReadingMode   Boolean          @default(false)
   declaredNeeds         Json             @default("{}")
   createdAt             DateTime         @default(now())
   updatedAt             DateTime         @updatedAt

@@ -184,7 +184,7 @@ Estados de usuario: `PENDING` · `ACTIVE` · `SUSPENDED` (solo `ACTIVE` puede in
 
 **Il Cafeto** es un restaurante/cafetería demo en Bogotá, configurado como tenant real en la base de datos. Sirve para probar el flujo completo: empresa → contenido → empleados → mentor IA.
 
-El programa de capacitación vive en [`tenants/il-cafeto/capacitacion/`](./tenants/il-cafeto/capacitacion/): manuales del sistema **Aion Restaurant POS** (mesero, cocina, bar, caja, gerencia, administración, etc.).
+El programa de capacitación demo vive en [`seed-data/demos/il-cafeto/capacitacion/`](./seed-data/demos/il-cafeto/capacitacion/): manuales del sistema **Aion Restaurant POS** (mesero, cocina, bar, caja, gerencia, administración, etc.).
 
 ### Cargar / actualizar Il Cafeto
 
@@ -343,7 +343,9 @@ Cappi/
 │   ├── ai/
 │   │   ├── providers/         # Gemini, OpenAI, Ollama
 │   │   └── rag/               # chunker, retriever, pipeline
-├── tenants/                   # Empresas multi-tenant (config + capacitación)
+├── seed-data/                 # Demos opcionales para `prisma db seed` (no runtime)
+│   ├── manifest.ts
+│   └── demos/il-cafeto/       # Ejemplo: curso Aion POS
 │   ├── il-cafeto/             # Restaurante demo Bogotá
 │   │   ├── organization.ts
 │   │   ├── modules.ts
@@ -458,7 +460,7 @@ Todas las rutas protegidas requieren sesión activa (cookie NextAuth), salvo aut
 
 ## Contenido de capacitación incluido
 
-En [`tenants/il-cafeto/capacitacion/`](./tenants/il-cafeto/capacitacion/) hay un **curso completo** para el sistema Aion Restaurant POS (~16–24 h), pensado para restaurantes multi-sucursal:
+En [`seed-data/demos/il-cafeto/capacitacion/`](./seed-data/demos/il-cafeto/capacitacion/) hay un **curso completo** para el sistema Aion Restaurant POS (~16–24 h), pensado para restaurantes multi-sucursal:
 
 | # | Módulo | Audiencia |
 |---|--------|-----------|
@@ -472,9 +474,9 @@ En [`tenants/il-cafeto/capacitacion/`](./tenants/il-cafeto/capacitacion/) hay un
 | 7 | Experiencia del cliente | Referencia para todos |
 | 8 | Apéndices | Glosario y evaluaciones |
 
-El README del curso está en [`tenants/il-cafeto/capacitacion/README.md`](./tenants/il-cafeto/capacitacion/README.md) (planes de 5 días, credenciales demo Aion, escalamiento de incidencias).
+El README del curso está en [`seed-data/demos/il-cafeto/capacitacion/README.md`](./seed-data/demos/il-cafeto/capacitacion/README.md) (planes de 5 días, credenciales demo Aion, escalamiento de incidencias).
 
-Para **otra empresa**: copia `tenants/il-cafeto/` como plantilla, edita su carpeta y regístrala en [`tenants/index.ts`](./tenants/index.ts), o usa `/register` y sube PDFs en Documentos.
+Para **otra empresa en producción**: usa `/register` y sube PDFs en Documentos. Para **otro demo local** de desarrollo, copia `seed-data/demos/il-cafeto/` y regístralo en [`seed-data/manifest.ts`](./seed-data/manifest.ts).
 
 ---
 
@@ -528,9 +530,3 @@ Ver [docs/MVP-ROADMAP.md](./docs/MVP-ROADMAP.md) — fases de auth, core, aprend
 ## Licencia
 
 Proyecto **privado** — Cappi © 2026. Todos los derechos reservados.
-
-
-// cp -r tenants/il-cafeto tenants/la-cazuela
-# editar organization.ts, modules.ts, capacitacion/
-# registrar en tenants/index.ts
-npm run db:seed

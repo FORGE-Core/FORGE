@@ -15,27 +15,27 @@ const MODALITY_LINKS: Record<
   READING: {
     topic: "Refuerza con lectura guiada",
     reason: "Tu perfil indica que aprendes mejor leyendo — explora módulos con resúmenes",
-    href: "/dashboard/modules",
+    href: "/modules",
   },
   LISTENING: {
     topic: "Pregunta a NOVA en voz alta",
     reason: "Activa lectura automática en tu perfil y escucha las respuestas",
-    href: "/dashboard/profile",
+    href: "/profile",
   },
   VISUAL: {
     topic: "Practica ordenando pasos",
     reason: "Las actividades visuales refuerzan procesos operativos",
-    href: "/dashboard/activities",
+    href: "/activities",
   },
   PRACTICE: {
     topic: "Haz una simulación práctica",
     reason: "Tu perfil favorece aprender haciendo — prueba un escenario real",
-    href: "/dashboard/simulations",
+    href: "/activities",
   },
   MIXED: {
     topic: "Combina módulo + mentor IA",
     reason: "Alterna lectura y práctica para consolidar conocimientos",
-    href: "/dashboard/chat",
+    href: "/chat",
   },
 };
 
@@ -59,7 +59,7 @@ export function buildAlaeRecommendations({
     items.push({
       topic: "Simulación práctica",
       reason: "Indicaste que aprendes mejor practicando — prueba un caso real",
-      href: "/dashboard/simulations",
+      href: "/activities",
       priority: 8,
     });
   }
@@ -68,7 +68,7 @@ export function buildAlaeRecommendations({
     items.push({
       topic: "Pide ejemplos a NOVA",
       reason: "Prefieres ejemplos del día a día — el mentor puede generarlos",
-      href: "/dashboard/chat?prompt=Dame%20un%20ejemplo%20práctico%20de%20mi%20trabajo",
+      href: "/chat?prompt=Dame%20un%20ejemplo%20práctico%20de%20mi%20trabajo",
       priority: 9,
     });
   }
@@ -80,7 +80,7 @@ export function buildAlaeRecommendations({
         supportLevel === "INTENSIVE"
           ? "Necesitas soporte extra — usa ✨ Explicar fácil en cualquier módulo"
           : "NOVA puede simplificar procesos complejos para ti",
-      href: "/dashboard/chat?prompt=Explícame%20de%20forma%20sencilla%20mi%20próximo%20proceso",
+      href: "/chat?prompt=Explícame%20de%20forma%20sencilla%20mi%20próximo%20proceso",
       priority: 20,
     });
   }
@@ -89,7 +89,7 @@ export function buildAlaeRecommendations({
     items.push({
       topic: pendingModule.title,
       reason: "Siguiente módulo recomendado según tu progreso",
-      href: `/dashboard/modules/${pendingModule.slug}`,
+      href: `/modules/${pendingModule.slug}`,
       priority: 5,
     });
   }

@@ -1,22 +1,21 @@
-import { auth } from "@/auth";
 import { checkApiRateLimit } from "@/lib/api-guard";
-import { getAlaeContextForUser } from "@/lib/alae/accessibility-profile";
-import { enrichRAGSources } from "@/lib/chat/enrich-sources";
-import { db } from "@/lib/db";
+import { serviceErrorJsonResponse } from "@/lib/api/service-response";
+import { requireTenantSession } from "@/lib/tenant";
+import { tenantAuthJsonError } from "@/lib/api/tenant-route";
 import {
-  recordModalityUse,
-  syncSupportLevelFromActivity,
-} from "@/lib/alae/learning-profile";
-import { logLearningEvent } from "@/lib/learning/events";
-import { prepareRAGContext, streamRAGAnswer } from "@/ai/rag/stream-pipeline";
+  persistMentorStreamResult,
+  prepareMentorStream,
+  streamRAGAnswer,
+} from "@/services/server/chat";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 export async function POST(req: Request) {
-  const session = await auth();
-  const userId = session?.user?.id;
-  const organizationId = session?.user?.organizationId;
+  const tenant = await requireTenantSession();
+  if (!tenant.ok) return tenantAuthJsonError(tenant);
+
+  const { userId, organizationId, role, db } = tenant.ctx;
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0] ?? null;
 
   const guard = checkApiRateLimit(userId, ip, 40);
@@ -29,35 +28,17 @@ export async function POST(req: Request) {
     return Response.json({ error: "Cuerpo JSON inválido" }, { status: 400 });
   }
 
-  const message = body.message?.trim();
-  if (!message) {
-    return Response.json({ error: "Mensaje requerido" }, { status: 400 });
-  }
+  const ctx = { organizationId, userId, role, db };
 
-  if (!organizationId || !userId) {
-    return Response.json(
-      { error: "Debes iniciar sesión para usar el mentor IA" },
-      { status: 401 }
-    );
-  }
-
-  let conversationId = body.conversationId;
-  if (!conversationId) {
-    const conv = await db.conversation.create({
-      data: {
-        organizationId,
-        userId,
-        title: message.slice(0, 80),
-      },
+  let setup: Awaited<ReturnType<typeof prepareMentorStream>>;
+  try {
+    setup = await prepareMentorStream(ctx, {
+      message: body.message ?? "",
+      conversationId: body.conversationId,
     });
-    conversationId = conv.id;
+  } catch (error) {
+    return serviceErrorJsonResponse(error);
   }
-
-  const [{ sources }, alaeContext] = await Promise.all([
-    prepareRAGContext(organizationId, message),
-    getAlaeContextForUser(userId, organizationId),
-  ]);
-  const enriched = await enrichRAGSources(sources);
 
   const encoder = new TextEncoder();
   let fullAnswer = "";
@@ -71,44 +52,29 @@ export async function POST(req: Request) {
       };
 
       send("meta", {
-        conversationId,
-        sources: enriched,
-        officialDocs: enriched.length > 0,
-        confidence: enriched.length > 0 ? "high" : "low",
+        conversationId: setup.conversationId,
+        sources: setup.enriched,
+        officialDocs: setup.enriched.length > 0,
+        confidence: setup.enriched.length > 0 ? "high" : "low",
       });
 
       try {
         for await (const chunk of streamRAGAnswer({
           organizationId,
-          question: message,
-          alaeContext,
+          question: setup.message,
+          alaeContext: setup.alaeContext,
+          db,
         })) {
           fullAnswer += chunk;
           send("token", { text: chunk });
         }
 
-        await db.message.createMany({
-          data: [
-            { conversationId, role: "user", content: message },
-            {
-              conversationId,
-              role: "assistant",
-              content: fullAnswer,
-              sources: enriched as object[],
-            },
-          ],
+        await persistMentorStreamResult(ctx, {
+          conversationId: setup.conversationId,
+          message: setup.message,
+          fullAnswer,
+          enriched: setup.enriched,
         });
-
-        await Promise.all([
-          logLearningEvent({
-            organizationId,
-            userId,
-            eventType: "CHAT_QUESTION",
-            payload: { conversationId, sourceCount: enriched.length, stream: true },
-          }),
-          recordModalityUse(userId, organizationId, "READING"),
-          syncSupportLevelFromActivity(userId, organizationId),
-        ]);
 
         send("done", { answer: fullAnswer });
       } catch (err) {

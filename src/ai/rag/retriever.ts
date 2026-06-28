@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+import type { PrismaClient } from "@prisma/client";
 
 export interface RetrievedChunk {
   chunkId: string;
@@ -14,10 +14,12 @@ export async function searchSimilarChunks({
   organizationId,
   embedding,
   topK = 5,
+  db,
 }: {
   organizationId: string;
   embedding: number[];
   topK?: number;
+  db: PrismaClient;
 }): Promise<RetrievedChunk[]> {
   const vectorStr = `[${embedding.join(",")}]`;
 
@@ -33,22 +35,26 @@ export async function searchSimilarChunks({
       LIMIT ${topK}
     `;
 
-    return rows.map((r) => ({
-      chunkId: r.id,
-      content: r.content,
-      score: Number(r.score),
-    }));
+    if (rows.length > 0) {
+      return rows.map((r) => ({
+        chunkId: r.id,
+        content: r.content,
+        score: Number(r.score),
+      }));
+    }
   } catch {
-    // Fallback: búsqueda por texto si pgvector no está configurado aún
-    const chunks = await db.documentChunk.findMany({
-      where: { organizationId },
-      take: topK,
-      orderBy: { createdAt: "desc" },
-    });
-    return chunks.map((c) => ({
-      chunkId: c.id,
-      content: c.content,
-      score: 0,
-    }));
+    // pgvector no configurado — continúa al fallback
   }
+
+  // Fallback: chunks sin embedding (sin API key de embeddings o embeddings pendientes)
+  const chunks = await db.documentChunk.findMany({
+    where: { organizationId },
+    take: topK,
+    orderBy: { createdAt: "desc" },
+  });
+  return chunks.map((c) => ({
+    chunkId: c.id,
+    content: c.content,
+    score: 0,
+  }));
 }

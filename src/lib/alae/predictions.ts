@@ -27,7 +27,7 @@ export function buildLearningPredictions({
       label: "Más simulaciones esta semana",
       confidence: 82,
       action: "El equipo responde mejor practicando escenarios.",
-      href: "/dashboard/simulations",
+      href: "/activities",
     });
   }
 
@@ -36,7 +36,7 @@ export function buildLearningPredictions({
       label: "Reforzar contenido en audio/texto",
       confidence: 76,
       action: "Prioriza NOVA con lectura automática y resúmenes.",
-      href: "/dashboard/chat",
+      href: "/chat",
     });
   }
 
@@ -45,7 +45,7 @@ export function buildLearningPredictions({
       label: "Riesgo de abandono en quizzes",
       confidence: Math.min(90, 100 - passRate),
       action: "Activa modo paso a paso y simplifica manuales.",
-      href: "/dashboard/reports/inclusion",
+      href: "/reports/inclusion",
     });
   }
 
@@ -54,7 +54,7 @@ export function buildLearningPredictions({
       label: "Soporte simplificado en aumento",
       confidence: 70,
       action: "Audita documentos con menor Inclusion Score.",
-      href: "/dashboard/reports/inclusion",
+      href: "/reports/inclusion",
     });
   }
 
@@ -63,7 +63,7 @@ export function buildLearningPredictions({
       label: `Ventana óptima de capacitación: ${peakHour}:00`,
       confidence: 65,
       action: "Programa recordatorios push en esa franja horaria.",
-      href: "/dashboard/profile",
+      href: "/profile",
     });
   }
 

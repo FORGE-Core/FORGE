@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { LearningProfileData } from "@/lib/alae/types";
+import { accessibilityClient } from "@/services/client";
 
 const MODALITY_LABELS: Record<string, string> = {
   READING: "Lectura",
@@ -18,10 +19,10 @@ export function LearningProfileCard() {
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    void fetch("/api/learning-profile")
-      .then((r) => r.json())
+    void accessibilityClient
+      .getLearningProfile()
       .then((d) => {
-        if (d.profile) setProfile(d.profile);
+        if (d.profile) setProfile(d.profile as LearningProfileData);
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false));

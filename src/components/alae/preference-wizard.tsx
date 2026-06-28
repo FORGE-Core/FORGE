@@ -5,6 +5,7 @@ import type { LearningModality } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { accessibilityClient } from "@/services/client";
 
 const LEARN_OPTIONS: { id: LearningModality; label: string; desc: string }[] =
   [
@@ -22,11 +23,7 @@ const HELP_OPTIONS = [
 ] as const;
 
 async function skipWizard() {
-  await fetch("/api/accessibility/profile", {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ wizardCompleted: true }),
-  });
+  await accessibilityClient.updateProfile({ wizardCompleted: true });
 }
 
 export function PreferenceWizard({ onComplete }: { onComplete: () => void }) {
@@ -52,19 +49,15 @@ export function PreferenceWizard({ onComplete }: { onComplete: () => void }) {
   const finish = async () => {
     setSaving(true);
     try {
-      await fetch("/api/learning-profile", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          wizard: {
-            preferredModality: modality,
-            stepByStep: !!helps.stepByStep,
-            simplified: !!helps.simplified,
-            summaries: !!helps.simplified,
-            examples: !!helps.examples,
-            simulations: !!helps.simulations,
-          },
-        }),
+      await accessibilityClient.updateLearningProfile({
+        wizard: {
+          preferredModality: modality,
+          stepByStep: !!helps.stepByStep,
+          simplified: !!helps.simplified,
+          summaries: !!helps.simplified,
+          examples: !!helps.examples,
+          simulations: !!helps.simulations,
+        },
       });
       onComplete();
     } finally {

@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Loader2, Video } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { documentsClient } from "@/services/client";
 
 type VideoUploadZoneProps = {
   onUploaded: () => void;
@@ -41,25 +42,7 @@ export function VideoUploadZone({ onUploaded }: VideoUploadZoneProps) {
         for (const file of list) {
           const formData = new FormData();
           formData.append("file", file);
-
-          const res = await fetch("/api/documents", {
-            method: "POST",
-            body: formData,
-          });
-
-          const raw = await res.text();
-          let data: { error?: string };
-          try {
-            data = raw ? JSON.parse(raw) : {};
-          } catch {
-            throw new Error(
-              raw.slice(0, 100) || `Error al subir (${res.status})`
-            );
-          }
-
-          if (!res.ok) {
-            throw new Error(data.error ?? "No se pudo subir el video");
-          }
+          await documentsClient.upload(formData);
         }
         onUploaded();
       } catch (err) {

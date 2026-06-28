@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
-import { assertAdminSession } from "@/lib/auth/roles";
 import { db } from "@/lib/db";
 import { getOrganizationModuleBySlug } from "@/lib/training/modules";
-import { uploadModuleVideo } from "@/services/documents/upload-module-video";
+import { uploadModuleVideo } from "@/services/server/documents/upload-module-video";
+import { requireAdminApi } from "@/lib/api/tenant-route";
 
 export const runtime = "nodejs";
 
@@ -12,17 +11,10 @@ export async function POST(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const session = await auth();
-    const adminCheck = assertAdminSession(session);
+    const tenant = await requireAdminApi();
+    if (!tenant.ok) return tenant.response;
 
-    if (!adminCheck.ok) {
-      return NextResponse.json(
-        { error: adminCheck.error },
-        { status: adminCheck.status }
-      );
-    }
-
-    const organizationId = adminCheck.session.user.organizationId;
+    const organizationId = tenant.ctx.organizationId;
     const { slug } = await params;
 
     const result = await getOrganizationModuleBySlug(organizationId, slug);
@@ -64,17 +56,10 @@ export async function DELETE(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const session = await auth();
-    const adminCheck = assertAdminSession(session);
+    const tenant = await requireAdminApi();
+    if (!tenant.ok) return tenant.response;
 
-    if (!adminCheck.ok) {
-      return NextResponse.json(
-        { error: adminCheck.error },
-        { status: adminCheck.status }
-      );
-    }
-
-    const organizationId = adminCheck.session.user.organizationId;
+    const organizationId = tenant.ctx.organizationId;
     const { slug } = await params;
 
     const result = await getOrganizationModuleBySlug(organizationId, slug);
@@ -98,7 +83,7 @@ export async function DELETE(
     }
 
     if (video.fileUrl) {
-      const { deleteStoredFile } = await import("@/lib/document-storage");
+      const { deleteStoredFile } = await import("@/lib/storage");
       await deleteStoredFile(video.fileUrl);
     }
 

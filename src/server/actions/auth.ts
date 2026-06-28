@@ -3,6 +3,7 @@
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { db } from "@/lib/db";
+import { provisionTenantSchema } from "@/lib/db/provision-tenant";
 
 const registerSchema = z.object({
   companyName: z.string().min(2, "Nombre de empresa muy corto"),
@@ -56,6 +57,8 @@ export async function registerAction(
   const passwordHash = await bcrypt.hash(parsed.data.password, 12);
   const slug = await uniqueSlug(parsed.data.companyName);
 
+  let orgId: string | undefined;
+
   await db.$transaction(async (tx) => {
     const org = await tx.organization.create({
       data: {
@@ -63,6 +66,8 @@ export async function registerAction(
         slug,
       },
     });
+
+    orgId = org.id;
 
     await tx.user.create({
       data: {
@@ -75,6 +80,17 @@ export async function registerAction(
       },
     });
   });
+
+  // Provisionar schema del tenant de forma síncrona para que las tablas
+  // existan antes de que el usuario haga su primer login
+  if (orgId) {
+    try {
+      await provisionTenantSchema(orgId);
+    } catch (err) {
+      console.error("[tenant] Error al provisionar schema:", err);
+      // No bloquear el registro si el provisioning falla
+    }
+  }
 
   return { ok: true, email };
 }
