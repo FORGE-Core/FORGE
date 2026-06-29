@@ -10,7 +10,7 @@ No es un chatbot genérico. Es un **mentor IA** que responde con el conocimiento
 
 ---
 
-## Tabla de contenidos
+## Tabla de contenidos ##
 
 1. [El problema que resuelve](#el-problema-que-resuelve)
 2. [La propuesta de valor](#la-propuesta-de-valor)
