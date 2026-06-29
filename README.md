@@ -1,12 +1,12 @@
-# Cappi
+# FORGE
 
 **Plataforma SaaS multi-tenant de capacitación empresarial con inteligencia artificial contextual.**
 
-Cappi convierte la documentación interna de cada empresa — manuales, procedimientos, políticas, guías operativas — en un **ecosistema de aprendizaje** para equipos de alta rotación: restaurantes, logística, retail, operaciones de campo y cualquier negocio donde capacitar rápido y bien es crítico.
+FORGE convierte la documentación interna de cada empresa — manuales, procedimientos, políticas, guías operativas — en un **ecosistema de aprendizaje** para equipos de alta rotación: restaurantes, logística, retail, operaciones de campo y cualquier negocio donde capacitar rápido y bien es crítico.
 
 No es un chatbot genérico. Es un **mentor IA** que responde con el conocimiento *de tu empresa*, combinado con módulos de capacitación, seguimiento de progreso, actividades evaluativas y reportes para supervisión.
 
-> En la interfaz de producto aparece la marca **FORGE** en algunas pantallas (landing, sidebar). El repositorio y el producto backend se denominan  **Cappi**.
+> En la interfaz de producto aparece la marca **FORGE** en algunas pantallas (landing, sidebar). El repositorio y el producto backend se denominan  **FORGE**.
 
 ---
 
@@ -14,7 +14,7 @@ No es un chatbot genérico. Es un **mentor IA** que responde con el conocimiento
 
 1. [El problema que resuelve](#el-problema-que-resuelve)
 2. [La propuesta de valor](#la-propuesta-de-valor)
-3. [Qué es y qué no es Cappi](#qué-es-y-qué-no-es-cappi)
+3. [Qué es y qué no es FORGE](#qué-es-y-qué-no-es-forge)
 4. [Público objetivo](#público-objetivo)
 5. [Funcionalidades](#funcionalidades)
 6. [Modelo multi-tenant](#modelo-multi-tenant)
@@ -48,7 +48,7 @@ Las empresas operativas pierden tiempo y dinero por:
 | Conocimiento en la cabeza del supervisor | Dependencia de personas, no de procesos |
 | Chatbots genéricos (ChatGPT, etc.) | Respuestas incorrectas o ajenas a *tu* negocio |
 
-Cappi centraliza el conocimiento operativo, lo **indexa por empresa** y lo pone al alcance del empleado en el piso de trabajo: módulos estructurados + mentor IA que cita el material interno.
+FORGE centraliza el conocimiento operativo, lo **indexa por empresa** y lo pone al alcance del empleado en el piso de trabajo: módulos estructurados + mentor IA que cita el material interno.
 
 ---
 
@@ -70,9 +70,9 @@ Supervisión a ciegas    →  Progreso, intentos y reportes por equipo
 
 ---
 
-## Qué es y qué no es Cappi
+## Qué es y qué no es FORGE
 
-| ✅ Cappi **sí** es | ❌ Cappi **no** es |
+| ✅ FORGE **sí** es | ❌ FORGE **no** es |
 |-------------------|-------------------|
 | LMS empresarial con IA contextual (RAG) | Un clon de ChatGPT para empleados |
 | SaaS multi-tenant (una instancia, muchas empresas) | Un curso MOOC público |
@@ -136,7 +136,7 @@ Cada **empresa** es una `Organization`. Todo el contenido y los usuarios pertene
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    Instancia Cappi (SaaS)                    │
+│                    Instancia FORGE (SaaS)                    │
 ├─────────────────┬─────────────────┬─────────────────────────┤
 │  Il Cafeto      │  LogiExpress MX │  Otra empresa…          │
 │  slug: il-cafeto│  (registro app) │                         │
@@ -331,7 +331,7 @@ Extensiones previstas: **pgvector** en PostgreSQL para embeddings; almacenamient
 ## Estructura del repositorio
 
 ```
-Cappi/
+FORGE/
 ├── prisma/
 │   ├── schema.prisma          # Modelo multi-tenant completo
 │   └── seed.ts                # Seed Il Cafeto + capacitación
@@ -381,7 +381,7 @@ Cappi/
 
 ```bash
 # 1. Clonar e instalar
-git clone <repo-url> Cappi && cd Cappi
+git clone <repo-url> FORGE && cd FORGE
 npm install
 
 # 2. Entorno
@@ -529,4 +529,4 @@ Ver [docs/MVP-ROADMAP.md](./docs/MVP-ROADMAP.md) — fases de auth, core, aprend
 
 ## Licencia
 
-Proyecto **privado** — Cappi © 2026. Todos los derechos reservados.
+Proyecto **privado** — FORGE © 2026. Todos los derechos reservados.

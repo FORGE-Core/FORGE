@@ -1,14 +1,14 @@
-# Cappi / FORGE — Plataforma SaaS de Capacitación Empresarial con IA Contextual
+# FORGE — Plataforma SaaS de Capacitación Empresarial con IA Contextual
 
 > **Documento de Ingeniería de Requisitos**  
 > Versión 1.0 · Junio 2026  
-> Autores: Equipo de desarrollo Cappi
+> Autores: Equipo de desarrollo FORGE
 
 ---
 
 ## Descripción General
 
-**Cappi** (nombre comercial: **FORGE**) es una plataforma web SaaS multi-tenant de capacitación empresarial que integra un motor de inteligencia artificial basado en **Retrieval-Augmented Generation (RAG)**. Permite a organizaciones convertir su documentación interna (manuales, procedimientos, políticas operativas) en un ecosistema de aprendizaje estructurado y consultable, accesible para equipos de alta rotación en industrias como restaurantes, retail, logística y operaciones de campo.
+**FORGE** (nombre comercial: **FORGE**) es una plataforma web SaaS multi-tenant de capacitación empresarial que integra un motor de inteligencia artificial basado en **Retrieval-Augmented Generation (RAG)**. Permite a organizaciones convertir su documentación interna (manuales, procedimientos, políticas operativas) en un ecosistema de aprendizaje estructurado y consultable, accesible para equipos de alta rotación en industrias como restaurantes, retail, logística y operaciones de campo.
 
 El sistema complementa los módulos de capacitación con un **mentor de IA contextual** que responde preguntas con base exclusiva en el material corporativo indexado de cada tenant, garantizando respuestas precisas y alineadas a los procesos internos de cada empresa.
 
@@ -166,7 +166,7 @@ Proveer a organizaciones empresariales una plataforma centralizada de capacitaci
 
 ```
 ╔══════════════════════════════════════════════════════════════════╗
-║                     PLATAFORMA CAPPI / FORGE                    ║
+║                     PLATAFORMA FORGE                    ║
 ╠══════════════════════════════════════════════════════════════════╣
 ║                                                                  ║
 ║  ACTORES EXTERNOS          SISTEMA                               ║
@@ -347,7 +347,7 @@ Respuesta + fuentes ──▶ Empleado
 
 ## Conclusiones
 
-Cappi resuelve un problema real de organizaciones operativas: el conocimiento institucional disperso que genera errores, costos de capacitación repetitiva y alta rotación sin onboarding efectivo. Su diferenciador central es el **mentor de IA contextual basado en RAG**, que garantiza respuestas fundamentadas en el material interno de cada empresa y no en conocimiento genérico.
+FORGE resuelve un problema real de organizaciones operativas: el conocimiento institucional disperso que genera errores, costos de capacitación repetitiva y alta rotación sin onboarding efectivo. Su diferenciador central es el **mentor de IA contextual basado en RAG**, que garantiza respuestas fundamentadas en el material interno de cada empresa y no en conocimiento genérico.
 
 Los requisitos definidos en este documento son **verificables y medibles**: cada RF tiene un criterio de aceptación concreto; cada RNF tiene una métrica numérica. La priorización MoSCoW asegura que el equipo entregue un núcleo funcional (RF-01 a RF-14, RNF-04, RNF-05) antes de expandir hacia ALAE, reportes avanzados y PWA.
 
@@ -357,4 +357,4 @@ El sistema está diseñado para escalar de un piloto de restaurante (Il Cafeto) 
 
 ---
 
-*Documento de Ingeniería de Requisitos — Cappi / FORGE · Versión 1.0 · Junio 2026*
+*Documento de Ingeniería de Requisitos — FORGE · Versión 1.0 · Junio 2026*

@@ -1,4 +1,4 @@
-# Il Cafeto — demo de desarrollo (Cappi)
+# Il Cafeto — demo de desarrollo (FORGE)
 
 Restaurante/cafetería en **Bogotá**, bundle de ejemplo para `prisma db seed`.
 

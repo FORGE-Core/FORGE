@@ -1,4 +1,4 @@
-# Roadmap MVP — FORGE / Cappi ✅ COMPLETADO
+# Roadmap MVP — FORGE ✅ COMPLETADO
 
 ## Fase 1 — Fundación ✅
 

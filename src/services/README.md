@@ -1,4 +1,4 @@
-# Capa de servicios — Cappi / FORGE
+# Capa de servicios — FORGE
 
 La capa `services` se divide en **cliente** y **servidor**:
 

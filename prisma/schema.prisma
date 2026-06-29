@@ -1,4 +1,4 @@
-// Cappi — Plataforma de capacitación empresarial multi-tenant
+// FORGE — Plataforma de capacitación empresarial multi-tenant
 // PostgreSQL + pgvector (habilitar extensión en migración SQL)
 
 generator client {
