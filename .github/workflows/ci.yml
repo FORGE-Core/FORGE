@@ -50,4 +50,7 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/forge
           DIRECT_URL: postgresql://postgres:postgres@localhost:5432/forge
           AUTH_SECRET: ci-build-secret-min-32-chars-long
+          AUTH_TRUST_HOST: "true"
+          AUTH_URL: http://localhost:3000
+          NEXTAUTH_URL: http://localhost:3000
           GEMINI_API_KEY: ci-placeholder
