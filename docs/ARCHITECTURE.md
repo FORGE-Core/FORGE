@@ -1,8 +1,8 @@
-# Arquitectura Cappi
+# Arquitectura FORGE
 
 ## Visión
 
-Cappi es una plataforma SaaS **multi-tenant** de capacitación empresarial con IA contextual (RAG). No es un chatbot genérico: es un ecosistema de aprendizaje, actividades, simulaciones y analytics.
+FORGE es una plataforma SaaS **multi-tenant** de capacitación empresarial con IA contextual (RAG). No es un chatbot genérico: es un ecosistema de aprendizaje, actividades, simulaciones y analytics.
 
 ## Capas
 

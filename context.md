@@ -1,13 +1,13 @@
-# Contexto del proyecto — Cappi / FORGE
+# Contexto del proyecto — FORGE
 
 > Documento de referencia para IAs y desarrolladores que entran al proyecto sin historial previo.
-> Repositorio: `force` (producto backend: **Cappi**).
+> Repositorio: `force` (producto backend: **FORGE**).
 
 ---
 
 ## 1. Resumen ejecutivo
 
-**Cappi** es una plataforma **SaaS multi-tenant** de capacitación empresarial con **inteligencia artificial contextual (RAG)**. Convierte la documentación interna de cada empresa (manuales, procedimientos, políticas) en un ecosistema de aprendizaje para equipos de alta rotación: restaurantes, retail, logística, operaciones de campo.
+**FORGE** es una plataforma **SaaS multi-tenant** de capacitación empresarial con **inteligencia artificial contextual (RAG)**. Convierte la documentación interna de cada empresa (manuales, procedimientos, políticas) en un ecosistema de aprendizaje para equipos de alta rotación: restaurantes, retail, logística, operaciones de campo.
 
 **No es un chatbot genérico.** Es un mentor IA que responde con el conocimiento *de la empresa*, combinado con módulos de capacitación, actividades evaluativas, simulaciones, seguimiento de progreso y reportes.
 
@@ -15,7 +15,7 @@
 
 | Contexto | Nombre |
 |----------|--------|
-| Repositorio / backend | **Cappi** (`package.json`: `"name": "cappi"`) |
+| Repositorio / backend | **FORGE** (`package.json`: `"name": "forge"`) |
 | UI (landing, sidebar) | **FORGE** |
 | Asistente IA en la interfaz | **NOVA** |
 
@@ -309,7 +309,7 @@ Todas las rutas protegidas requieren sesión NextAuth (cookie), salvo `/api/auth
 ## 10. Estructura del repositorio
 
 ```
-force/  (Cappi)
+force/  (FORGE)
 ├── src/
 │   ├── services/             # ⭐ Capa de negocio (toda lógica de dominio)
 │   │   ├── types.ts          # ServiceContext, errores

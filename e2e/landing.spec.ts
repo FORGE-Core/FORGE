@@ -6,7 +6,7 @@ test("landing page carga y muestra hero", async ({ page }) => {
     page.getByRole("heading", { name: /70% más rápido/i })
   ).toBeVisible();
   await expect(
-    page.getByRole("link", { name: /ver plataforma/i })
+    page.getByRole("link", { name: /iniciar sesión/i })
   ).toBeVisible();
 });
 
