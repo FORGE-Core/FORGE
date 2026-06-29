@@ -83,7 +83,7 @@ export default function HomePage() {
                 </p>
                 <div className="pt-1">
                   <Link
-                    href="/accesible"
+                    href="/login?accesible=1"
                     className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand-cobalt px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-transform hover:scale-[1.01] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cobalt focus-visible:ring-offset-2"
                   >
                     <Volume2 className="h-4 w-4" aria-hidden />
