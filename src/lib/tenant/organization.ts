@@ -1,5 +1,6 @@
 import type { Session } from "next-auth";
 import { db } from "@/lib/db";
+import { parseOrganizationBranding } from "@/lib/organization/branding";
 import {
   DEFAULT_TENANT_FEATURES,
   type TenantFeatureFlags,
@@ -47,6 +48,7 @@ export async function getTenantSnapshot(
     industry: org.industry,
     logoUrl: org.logoUrl,
     plan,
+    branding: parseOrganizationBranding(settings),
     features: parseFeatureFlags(settings),
   };
 }

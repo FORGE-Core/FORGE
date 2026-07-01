@@ -1,9 +1,14 @@
 import { db } from "@/lib/db";
+import {
+  parseOrganizationBranding,
+  type OrganizationBranding,
+} from "@/lib/organization/branding";
 
 export type OrganizationSettingsData = {
   name: string;
   plan: string;
   industry: string | null;
+  branding: OrganizationBranding;
   stats: {
     activeUsers: number;
     moduleCount: number;
@@ -51,6 +56,7 @@ export async function getOrganizationSettings(organizationId: string) {
     name: org.name,
     plan,
     industry: org.industry,
+    branding: parseOrganizationBranding(settings),
     stats: { activeUsers, moduleCount, documentCount },
     notifications: {
       moduleReminders: notifications.moduleReminders ?? true,

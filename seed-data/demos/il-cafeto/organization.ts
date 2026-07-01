@@ -8,7 +8,11 @@ export const organization: SeedOrganizationConfig = {
   settings: {
     city: "Bogotá",
     country: "Colombia",
-    brandColor: "#581c22",
+    branding: {
+      primary: "#581c22",
+      secondary: "#9f1239",
+      accent: "#fff1f2",
+    },
     posRoutePrefix: "/aion/",
     trainingProgram: "Aion Restaurant POS",
     version: "1.0",

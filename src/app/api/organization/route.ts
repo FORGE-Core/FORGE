@@ -33,6 +33,7 @@ export async function PATCH(req: Request) {
       plan: body.plan,
       notifications: body.notifications,
       alae: body.alae,
+      branding: body.branding,
     });
 
     return NextResponse.json({ organization });

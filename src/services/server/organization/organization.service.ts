@@ -1,6 +1,11 @@
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { isAdmin } from "@/lib/auth/roles";
+import {
+  isValidHexColor,
+  parseOrganizationBranding,
+  type OrganizationBranding,
+} from "@/lib/organization/branding";
 import { ServiceError } from "@/services/server/errors";
 import type { AdminContext, OrganizationContext } from "@/services/server/types";
 // Note: db (global) is used for shared-schema tables (organizations, users)
@@ -39,6 +44,7 @@ export async function getOrganization(ctx: OrganizationContext) {
     organization: {
       ...org,
       plan,
+      branding: parseOrganizationBranding(settings),
       stats: {
         activeUsers,
         moduleCount,
@@ -57,6 +63,7 @@ export async function updateOrganization(
     plan?: string;
     notifications?: Record<string, unknown>;
     alae?: Record<string, unknown>;
+    branding?: Partial<OrganizationBranding>;
   }
 ) {
   const org = await db.organization.findUnique({
@@ -82,6 +89,31 @@ export async function updateOrganization(
       ...(currentSettings.alae as object),
       ...input.alae,
     };
+  }
+  if (input.branding) {
+    const currentBranding = parseOrganizationBranding(currentSettings);
+    const nextBranding = { ...currentBranding };
+
+    if (input.branding.primary !== undefined) {
+      if (!isValidHexColor(input.branding.primary)) {
+        throw new ServiceError("VALIDATION", "Color principal inválido");
+      }
+      nextBranding.primary = input.branding.primary.trim().toLowerCase();
+    }
+    if (input.branding.secondary !== undefined) {
+      if (!isValidHexColor(input.branding.secondary)) {
+        throw new ServiceError("VALIDATION", "Color secundario inválido");
+      }
+      nextBranding.secondary = input.branding.secondary.trim().toLowerCase();
+    }
+    if (input.branding.accent !== undefined) {
+      if (!isValidHexColor(input.branding.accent)) {
+        throw new ServiceError("VALIDATION", "Color de acento inválido");
+      }
+      nextBranding.accent = input.branding.accent.trim().toLowerCase();
+    }
+
+    nextSettings.branding = nextBranding;
   }
 
   return db.organization.update({

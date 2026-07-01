@@ -113,7 +113,7 @@ export const cachedOrganizationSettings = unstable_cache(
     );
     return getOrganizationSettings(organizationId);
   },
-  ["page-settings"],
+  ["page-settings-v2"],
   { revalidate: 60 }
 );
 

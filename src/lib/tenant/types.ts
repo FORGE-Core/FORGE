@@ -1,4 +1,5 @@
 import type { UserRole } from "@prisma/client";
+import type { OrganizationBranding } from "@/lib/organization/branding";
 
 /** Datos del tenant expuestos al cliente (sin secretos). */
 export type TenantSnapshot = {
@@ -8,6 +9,7 @@ export type TenantSnapshot = {
   industry: string | null;
   logoUrl: string | null;
   plan: string;
+  branding: OrganizationBranding;
   features: TenantFeatureFlags;
   userId: string;
   userName: string | null;

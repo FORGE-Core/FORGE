@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Bell,
   BookOpen,
   Building2,
   FileText,
   Loader2,
+  Palette,
   Save,
   Settings,
   Shield,
@@ -14,6 +16,12 @@ import {
 } from "lucide-react";
 import { FeedbackBanner } from "@/components/shared/feedback-banner";
 import { Button } from "@/components/ui/button";
+import {
+  applyBrandingToDocument,
+  DEFAULT_BRANDING,
+  resolveOrganizationBranding,
+  type OrganizationBranding,
+} from "@/lib/organization/branding";
 import type { OrganizationSettingsData } from "@/lib/organization/settings";
 import { organizationClient } from "@/services/client";
 import { ApiClientError } from "@/services/client/http";
@@ -87,7 +95,45 @@ function Toggle({ checked, onChange, disabled = false }: { checked: boolean; onC
   );
 }
 
+function ColorField({
+  label,
+  description,
+  value,
+  onChange,
+}: {
+  label: string;
+  description: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4 rounded-xl border border-black/5 bg-brand-light-bg px-4 py-3">
+      <div className="min-w-0">
+        <p className="text-sm font-medium">{label}</p>
+        <p className="text-xs text-brand-muted-gray">{description}</p>
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-24 rounded-lg border border-black/10 bg-white px-2 py-1.5 font-mono text-xs uppercase outline-none focus:ring-2 focus:ring-brand-cobalt/30"
+          aria-label={`${label} en hexadecimal`}
+        />
+        <input
+          type="color"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="h-10 w-10 cursor-pointer rounded-lg border border-black/10 bg-white p-1"
+          aria-label={`Selector de ${label}`}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function SettingsContent({ initialOrg }: SettingsContentProps) {
+  const router = useRouter();
   const { isAdmin } = useTenantPermissions();
   const [org, setOrg] = useState(initialOrg);
   const [saving, setSaving] = useState(false);
@@ -97,8 +143,25 @@ export function SettingsContent({ initialOrg }: SettingsContentProps) {
   const [industry, setIndustry] = useState(initialOrg.industry ?? "");
   const [notifications, setNotifications] = useState(initialOrg.notifications);
   const [inclusionMinScore, setInclusionMinScore] = useState(initialOrg.inclusionMinScore);
+  const [branding, setBranding] = useState<OrganizationBranding>(() =>
+    resolveOrganizationBranding(initialOrg.branding)
+  );
 
   const planCfg = PLAN_LABELS[org.plan] ?? PLAN_LABELS.starter!;
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    applyBrandingToDocument(branding);
+  }, [branding, isAdmin]);
+
+  function updateBranding(key: keyof OrganizationBranding, value: string) {
+    setBranding((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function resetBranding() {
+    setBranding(DEFAULT_BRANDING);
+    applyBrandingToDocument(DEFAULT_BRANDING);
+  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -111,11 +174,19 @@ export function SettingsContent({ initialOrg }: SettingsContentProps) {
         industry,
         notifications,
         alae: { minAcceptableScore: inclusionMinScore },
+        branding,
       });
       setSaveMessage({ type: "success", text: "Cambios guardados correctamente" });
+      applyBrandingToDocument(branding);
+      router.refresh();
       if (data.organization) {
-        const o = data.organization as typeof org;
-        setOrg((prev) => ({ ...prev, name: o.name ?? name, industry: o.industry ?? industry }));
+        const o = data.organization as typeof org & { branding?: OrganizationBranding };
+        setOrg((prev) => ({
+          ...prev,
+          name: o.name ?? name,
+          industry: o.industry ?? industry,
+          branding: resolveOrganizationBranding(o.branding ?? branding),
+        }));
       }
     } catch (err) {
       setSaveMessage({
@@ -207,6 +278,66 @@ export function SettingsContent({ initialOrg }: SettingsContentProps) {
             </div>
           </div>
         </div>
+
+        {/* ── Marca y colores — solo admin ─────────────────────── */}
+        {isAdmin && (
+          <div className="rounded-2xl border border-black/5 bg-white p-5 shadow-sm">
+            <SectionHeader
+              icon={Palette}
+              title="Marca y colores"
+              description="Personaliza la apariencia de la plataforma para tu empresa"
+            />
+            <div className="space-y-3">
+              <div
+                className="overflow-hidden rounded-2xl border border-black/5 p-4"
+                style={{
+                  background: `linear-gradient(135deg, ${branding.secondary} 0%, ${branding.primary} 100%)`,
+                }}
+              >
+                <p className="text-sm font-semibold text-white">Vista previa</p>
+                <p className="mt-1 text-xs text-white/80">
+                  Botones, enlaces y gradientes usarán estos colores en toda la app.
+                </p>
+                <div
+                  className="mt-3 inline-flex rounded-full px-3 py-1 text-xs font-medium text-brand-text-dark"
+                  style={{ backgroundColor: branding.accent }}
+                >
+                  Fondo de acento
+                </div>
+              </div>
+
+              <ColorField
+                label="Color principal"
+                description="Botones, enlaces y elementos activos"
+                value={branding.primary}
+                onChange={(value) => updateBranding("primary", value)}
+              />
+              <ColorField
+                label="Color secundario"
+                description="Gradientes y detalles destacados"
+                value={branding.secondary}
+                onChange={(value) => updateBranding("secondary", value)}
+              />
+              <ColorField
+                label="Color de acento"
+                description="Fondos suaves y tarjetas destacadas"
+                value={branding.accent}
+                onChange={(value) => updateBranding("accent", value)}
+              />
+
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={resetBranding}
+                >
+                  Restaurar colores por defecto
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── Notificaciones ───────────────────────────────────── */}
         <div className="rounded-2xl border border-black/5 bg-white p-5 shadow-sm">
