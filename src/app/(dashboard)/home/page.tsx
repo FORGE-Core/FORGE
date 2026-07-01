@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCachedTenant } from "@/lib/auth/cached-session";
 import { cachedDashboardData } from "@/lib/cache/page-data";
-import { HomeChrome } from "@/components/layout/home-chrome";
 import { DashboardView } from "@/components/dashboard";
 
 export default async function DashboardPage() {
@@ -16,10 +15,5 @@ export default async function DashboardPage() {
     tenant.name
   );
 
-  return (
-    <>
-      <DashboardView data={data} />
-      <HomeChrome />
-    </>
-  );
+  return <DashboardView data={data} />;
 }

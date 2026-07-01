@@ -23,10 +23,13 @@ export const trainingClient = {
     });
   },
 
-  deleteModuleVideo(slug: string) {
-    return apiRequest(`/api/training-modules/${slug}/video`, {
-      method: "DELETE",
-    });
+  deleteModuleVideo(slug: string, videoId: string) {
+    return apiRequest(
+      `/api/training-modules/${slug}/video?videoId=${encodeURIComponent(videoId)}`,
+      {
+        method: "DELETE",
+      }
+    );
   },
 
   updateModule(slug: string, body: Record<string, unknown>) {

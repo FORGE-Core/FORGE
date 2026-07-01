@@ -24,6 +24,7 @@ import { ModuleAdminVideo } from "./module-admin-video";
 import { ModuleAdminDocument } from "./module-admin-document";
 import { ModuleAdminDetails } from "./module-admin-details";
 import { ModuleHero } from "./module-hero";
+import { ModuleVideoList } from "./module-video-list";
 
 export function ModuleDetailContent({
   slug,
@@ -32,8 +33,6 @@ export function ModuleDetailContent({
   slug: string;
   module: ModuleDetailData;
 }) {
-  const videoUrl = trainingModule.videoUrl;
-
   return (
     <div className="space-y-8 pb-8">
       <Link
@@ -53,9 +52,13 @@ export function ModuleDetailContent({
             duration={trainingModule.duration}
             gradient={trainingModule.gradient}
             description={trainingModule.description}
-            hasVideo={trainingModule.hasVideo}
+          />
+
+          <ModuleVideoList
+            videos={trainingModule.videos}
+            moduleTitle={trainingModule.title}
+            description={trainingModule.description}
             canManage={trainingModule.canManage}
-            videoUrl={videoUrl}
           />
 
           {trainingModule.canManage && (
@@ -69,7 +72,7 @@ export function ModuleDetailContent({
             <ModuleAdminVideo
               slug={slug}
               moduleTitle={trainingModule.title}
-              videoId={trainingModule.videoId}
+              videos={trainingModule.videos}
             />
           )}
 

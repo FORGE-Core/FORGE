@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
 import { getOrganizationModuleBySlug } from "@/lib/training/modules";
-import { uploadModuleVideo } from "@/services/server/documents/upload-module-video";
+import {
+  deleteModuleVideo,
+  uploadModuleVideo,
+} from "@/services/server/documents/upload-module-video";
 import { requireAdminApi } from "@/lib/api/tenant-route";
 
 export const runtime = "nodejs";
@@ -52,7 +54,7 @@ export async function POST(
 }
 
 export async function DELETE(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
@@ -61,6 +63,14 @@ export async function DELETE(
 
     const organizationId = tenant.ctx.organizationId;
     const { slug } = await params;
+    const videoId = new URL(req.url).searchParams.get("videoId");
+
+    if (!videoId) {
+      return NextResponse.json(
+        { error: "Falta el identificador del video" },
+        { status: 400 }
+      );
+    }
 
     const result = await getOrganizationModuleBySlug(organizationId, slug);
     if (!result) {
@@ -70,31 +80,14 @@ export async function DELETE(
       );
     }
 
-    const video = await db.document.findFirst({
-      where: {
-        organizationId,
-        moduleId: result.module.id,
-        type: "VIDEO",
-      },
-    });
-
-    if (!video) {
-      return NextResponse.json({ error: "No hay video en este módulo" }, { status: 404 });
-    }
-
-    if (video.fileUrl) {
-      const { deleteStoredFile } = await import("@/lib/storage");
-      await deleteStoredFile(video.fileUrl);
-    }
-
-    await db.document.delete({ where: { id: video.id } });
+    await deleteModuleVideo(organizationId, result.module.id, videoId);
 
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("[training-modules video DELETE]", error);
-    return NextResponse.json(
-      { error: "No se pudo eliminar el video" },
-      { status: 500 }
-    );
+    const msg =
+      error instanceof Error ? error.message : "No se pudo eliminar el video";
+    const status = msg === "Video no encontrado" ? 404 : 500;
+    return NextResponse.json({ error: msg }, { status });
   }
 }
