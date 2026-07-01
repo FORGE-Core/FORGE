@@ -7,6 +7,8 @@ type ModuleVideoPlayerProps = {
   title: string;
   captionText?: string | null;
   onPlay?: () => void;
+  showCaptionPanel?: boolean;
+  describedById?: string;
 };
 
 export function ModuleVideoPlayer({
@@ -14,12 +16,18 @@ export function ModuleVideoPlayer({
   title,
   captionText,
   onPlay,
+  showCaptionPanel = true,
+  describedById,
 }: ModuleVideoPlayerProps) {
   const { captionsEnabled } = useAccessibility();
-  const captionId = `module-video-captions-${title.replace(/\s+/g, "-").slice(0, 24)}`;
+  const captionId =
+    describedById ??
+    `module-video-captions-${title.replace(/\s+/g, "-").slice(0, 24)}`;
+  const showCaptions =
+    showCaptionPanel && captionsEnabled && Boolean(captionText);
 
   return (
-    <div className="space-y-2">
+    <div className={showCaptions ? "space-y-2" : ""}>
       <video
         controls
         className="aspect-video w-full bg-black"
@@ -27,9 +35,7 @@ export function ModuleVideoPlayer({
         preload="metadata"
         playsInline
         aria-label={`Video del módulo: ${title}`}
-        aria-describedby={
-          captionsEnabled && captionText ? captionId : undefined
-        }
+        aria-describedby={showCaptions ? captionId : describedById}
         onPlay={onPlay}
       >
         {captionsEnabled && (
@@ -42,7 +48,7 @@ export function ModuleVideoPlayer({
         )}
         Tu navegador no soporta reproducción de video.
       </video>
-      {captionsEnabled && captionText && (
+      {showCaptions && captionText && (
         <div
           id={captionId}
           role="region"

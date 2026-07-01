@@ -11,6 +11,8 @@ type ModuleVideoListProps = {
   moduleTitle: string;
   description?: string | null;
   canManage?: boolean;
+  showEmptyState?: boolean;
+  startIndex?: number;
 };
 
 export function ModuleVideoList({
@@ -18,8 +20,11 @@ export function ModuleVideoList({
   moduleTitle,
   description,
   canManage = false,
+  showEmptyState = true,
+  startIndex = 1,
 }: ModuleVideoListProps) {
   if (videos.length === 0) {
+    if (!showEmptyState) return null;
     return (
       <Card>
         <CardHeader>
@@ -53,9 +58,9 @@ export function ModuleVideoList({
       <CardContent className="space-y-8">
         {videos.map((video, index) => (
           <div key={video.id} className="space-y-2">
-            {videos.length > 1 && (
+            {(videos.length > 1 || startIndex > 1) && (
               <p className="text-sm font-medium text-brand-text-dark">
-                {index + 1}. {video.title}
+                {startIndex + index}. {video.title}
               </p>
             )}
             <div className="overflow-hidden rounded-2xl ring-1 ring-black/5">

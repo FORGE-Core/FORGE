@@ -33,6 +33,8 @@ export function ModuleDetailContent({
   slug: string;
   module: ModuleDetailData;
 }) {
+  const [featuredVideo, ...otherVideos] = trainingModule.videos;
+
   return (
     <div className="space-y-8 pb-8">
       <Link
@@ -52,13 +54,16 @@ export function ModuleDetailContent({
             duration={trainingModule.duration}
             gradient={trainingModule.gradient}
             description={trainingModule.description}
+            featuredVideo={featuredVideo}
           />
 
           <ModuleVideoList
-            videos={trainingModule.videos}
+            videos={otherVideos}
             moduleTitle={trainingModule.title}
             description={trainingModule.description}
             canManage={trainingModule.canManage}
+            showEmptyState={trainingModule.videos.length === 0}
+            startIndex={featuredVideo ? 2 : 1}
           />
 
           {trainingModule.canManage && (
