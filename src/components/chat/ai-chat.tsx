@@ -426,9 +426,9 @@ export function AIChat() {
                   "¿Cómo registrar una devolución?",
                   "¿Qué hacer si un paquete se pierde?",
                 ]
-            ).map((s) => (
+            ).map((s, i) => (
               <button
-                key={s}
+                key={`${s}-${i}`}
                 type="button"
                 onClick={() => sendMessage(s)}
                 className="rounded-full border border-black/5 bg-brand-light-bg px-3 py-1.5 text-xs transition-colors hover:border-brand-cobalt/30 hover:bg-brand-champagne"
@@ -574,9 +574,9 @@ export function AIChat() {
                 No hay procesos registrados aún.
               </p>
             ) : (
-              processes.map((p) => (
+              processes.map((p, i) => (
                 <div
-                  key={p}
+                  key={`${p}-${i}`}
                   className="rounded-xl border border-black/5 px-3 py-2 text-brand-muted-gray"
                 >
                   {p}

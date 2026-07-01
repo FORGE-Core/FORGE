@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
+import type { ModuleVideoItem } from "@/services/server/training/module-detail.service";
 
 const ModuleVideoManager = dynamic(
   () =>
@@ -14,13 +15,13 @@ const ModuleVideoManager = dynamic(
 type ModuleAdminVideoProps = {
   slug: string;
   moduleTitle: string;
-  videoId: string | null;
+  videos: ModuleVideoItem[];
 };
 
 export function ModuleAdminVideo({
   slug,
   moduleTitle,
-  videoId,
+  videos,
 }: ModuleAdminVideoProps) {
   const router = useRouter();
 
@@ -28,7 +29,7 @@ export function ModuleAdminVideo({
     <ModuleVideoManager
       slug={slug}
       moduleTitle={moduleTitle}
-      videoId={videoId}
+      videos={videos}
       onUpdated={() => router.refresh()}
     />
   );

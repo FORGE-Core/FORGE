@@ -27,6 +27,12 @@ function videoExtension(file: File): string {
   return ".mp4";
 }
 
+function videoTitleFromFile(file: File, moduleTitle: string, index: number): string {
+  const base = file.name.replace(/\.[^.]+$/, "").trim();
+  if (base) return base;
+  return `Video ${index} — ${moduleTitle}`;
+}
+
 export async function uploadModuleVideo({
   organizationId,
   moduleId,
@@ -49,46 +55,11 @@ export async function uploadModuleVideo({
   const buffer = Buffer.from(await file.arrayBuffer());
   const ext = videoExtension(file);
 
-  const existing = await db.document.findFirst({
+  const existingCount = await db.document.count({
     where: { organizationId, moduleId, type: "VIDEO" },
   });
 
-  if (existing?.fileUrl) {
-    await deleteStoredFile(existing.fileUrl);
-  }
-
-  const title = `Video — ${moduleTitle}`;
-
-  if (existing) {
-    const relativePath = await saveOrganizationFile(
-      organizationId,
-      existing.id,
-      buffer,
-      ext,
-      file.type || undefined
-    );
-
-    await db.document.update({
-      where: { id: existing.id },
-      data: {
-        title,
-        status: "READY",
-        mimeType: file.type || "video/mp4",
-        fileSize: file.size,
-        fileUrl: relativePath,
-        metadata: {
-          mediaType: "video",
-          moduleVideo: true,
-          processedAt: new Date().toISOString(),
-          storageProvider: relativePath.startsWith("cloudinary://")
-            ? "cloudinary"
-            : "local",
-        },
-      },
-    });
-
-    return existing.id;
-  }
+  const title = videoTitleFromFile(file, moduleTitle, existingCount + 1);
 
   const document = await db.document.create({
     data: {
@@ -130,8 +101,8 @@ export async function uploadModuleVideo({
   return document.id;
 }
 
-export async function getModuleVideo(organizationId: string, moduleId: string) {
-  return db.document.findFirst({
+export async function getModuleVideos(organizationId: string, moduleId: string) {
+  return db.document.findMany({
     where: {
       organizationId,
       moduleId,
@@ -139,14 +110,45 @@ export async function getModuleVideo(organizationId: string, moduleId: string) {
       status: "READY",
       fileUrl: { not: null },
     },
-    orderBy: { updatedAt: "desc" },
+    orderBy: { createdAt: "asc" },
     select: {
       id: true,
       title: true,
       fileSize: true,
       fileUrl: true,
       mimeType: true,
-      updatedAt: true,
+      createdAt: true,
     },
   });
+}
+
+/** @deprecated Usa getModuleVideos */
+export async function getModuleVideo(organizationId: string, moduleId: string) {
+  const videos = await getModuleVideos(organizationId, moduleId);
+  return videos[0] ?? null;
+}
+
+export async function deleteModuleVideo(
+  organizationId: string,
+  moduleId: string,
+  videoId: string
+) {
+  const video = await db.document.findFirst({
+    where: {
+      id: videoId,
+      organizationId,
+      moduleId,
+      type: "VIDEO",
+    },
+  });
+
+  if (!video) {
+    throw new Error("Video no encontrado");
+  }
+
+  if (video.fileUrl) {
+    await deleteStoredFile(video.fileUrl);
+  }
+
+  await db.document.delete({ where: { id: video.id } });
 }

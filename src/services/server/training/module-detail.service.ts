@@ -3,8 +3,14 @@ import { getLatestInclusionScores } from "@/lib/alae/inclusion-scorer";
 import { canManageDocuments } from "@/lib/auth/roles";
 import type { ModuleCardData } from "@/components/modules/module-card";
 import { getOrganizationModuleBySlug } from "@/lib/training/modules";
-import { getModuleVideo } from "@/services/server/documents/upload-module-video";
+import { getModuleVideos } from "@/services/server/documents/upload-module-video";
 import { buildDocumentDeliveryUrl } from "@/lib/storage/delivery-url";
+
+export type ModuleVideoItem = {
+  id: string;
+  title: string;
+  url: string;
+};
 
 export type ModuleDetailData = ModuleCardData & {
   id: string;
@@ -13,8 +19,7 @@ export type ModuleDetailData = ModuleCardData & {
   estimatedMins: number | null;
   moduleStatus: "DRAFT" | "PUBLISHED" | "ARCHIVED";
   documentId: string | null;
-  videoId: string | null;
-  videoUrl: string | null;
+  videos: ModuleVideoItem[];
   hasVideo: boolean;
   canManage: boolean;
   lessons: {
@@ -43,8 +48,8 @@ export async function getModuleDetailForPage(
   const moduleId = result.module.id;
   const canManage = canManageDocuments(role);
 
-  const [video, inclusionScores, processes, moduleDocuments] = await Promise.all([
-    getModuleVideo(organizationId, moduleId),
+  const [moduleVideos, inclusionScores, processes, moduleDocuments] = await Promise.all([
+    getModuleVideos(organizationId, moduleId),
     getLatestInclusionScores(organizationId, "MODULE", [moduleId]),
     tenantDb
       ? tenantDb.process.findMany({
@@ -102,19 +107,24 @@ export async function getModuleDetailForPage(
           },
         ];
 
-  const resources = moduleDocuments.map((d) => ({
+  const resources = moduleDocuments
+    .filter((d) => d.type !== "VIDEO")
+    .map((d) => ({
     id: d.id,
     name: d.title,
     type:
       d.type === "VIDEO" ? "video" : d.type === "IMAGE" ? "image" : "pdf",
   }));
 
-  const videoUrl = video?.fileUrl
-    ? buildDocumentDeliveryUrl(video.fileUrl, {
+  const videos: ModuleVideoItem[] = moduleVideos.map((video) => ({
+    id: video.id,
+    title: video.title,
+    url:
+      buildDocumentDeliveryUrl(video.fileUrl!, {
         documentType: "VIDEO",
         inline: true,
-      }) ?? `/api/documents/${video.id}/file`
-    : null;
+      }) ?? `/api/documents/${video.id}/file`,
+  }));
 
   return {
     ...result.card,
@@ -125,9 +135,8 @@ export async function getModuleDetailForPage(
     estimatedMins: result.module.estimatedMins,
     moduleStatus: result.module.status,
     documentId: result.card.documentId,
-    videoId: video?.id ?? null,
-    videoUrl,
-    hasVideo: !!video,
+    videos,
+    hasVideo: videos.length > 0,
     canManage,
     lessons,
     resources,
